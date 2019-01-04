@@ -90,21 +90,23 @@ func draw(dt directoryTree, cd string) {
 		int(float64(cr[1])/10.0*float64(cw))
 	width = int(float64(cr[2]) / 10.0 * float64(cw))
 	count := 0
-	if files[dt[cd].active].IsDir() {
-		childPath := cd + "/" + files[dt[cd].active].Name()
-		files := readDir(childPath)
-		count = len(files)
-		if _, ok := dt[childPath]; !ok {
-			dt[childPath] = &dir{active: 0}
+	if len(files) > 0 {
+		if files[dt[cd].active].IsDir() {
+			childPath := cd + "/" + files[dt[cd].active].Name()
+			files := readDir(childPath)
+			count = len(files)
+			if _, ok := dt[childPath]; !ok {
+				dt[childPath] = &dir{active: 0}
+			}
+			drawDir(dt[childPath].active, 0, files, offset, width)
+		} else if files[dt[cd].active].Size() < 100*1024*1024 {
+			n := files[dt[cd].active].Name()
+			cmd := exec.Command("cat", n)
+			buf, _ := cmd.Output()
+			buf = buf[:200]
+			printString(offset, 0, width,
+				string(buf), termbox.ColorDefault, termbox.ColorDefault)
 		}
-		drawDir(dt[childPath].active, 0, files, offset, width)
-	} else if files[dt[cd].active].Size() < 100*1024*1024 {
-		n := files[dt[cd].active].Name()
-		cmd := exec.Command("cat", n)
-		buf, _ := cmd.Output()
-		buf = buf[:200]
-		printString(offset, 0, width,
-			string(buf), termbox.ColorDefault, termbox.ColorDefault)
 	}
 	offset = int(float64(cr[0]) / 10.0 * float64(cw))
 	width = int(float64(cr[1]) / 10.0 * float64(cw))

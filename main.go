@@ -45,20 +45,26 @@ func main() {
 					os.Chdir("../")
 				}
 			case 'l':
-				if files[dt[cd].active].IsDir() {
-					dn := cd + "/" + files[dt[cd].active].Name()
-					if _, ok := dt[dn]; !ok {
-						dt[dn] = &dir{active: 0}
+				if len(files) > 0 {
+					if files[dt[cd].active].IsDir() {
+						dn := cd + "/" + files[dt[cd].active].Name()
+						if _, ok := dt[dn]; !ok {
+							dt[dn] = &dir{active: 0}
+						}
+						os.Chdir(dn)
 					}
-					os.Chdir(dn)
 				}
 			case 'j':
-				(dt[cd]).active++
-				dt[cd].active %= len(files)
+				if len(files) > 0 {
+					(dt[cd]).active++
+					dt[cd].active %= len(files)
+				}
 			case 'k':
-				dt[cd].active--
-				if dt[cd].active < 0 {
-					dt[cd].active = 0
+				if len(files) > 0 {
+					dt[cd].active--
+					if dt[cd].active < 0 {
+						dt[cd].active = 0
+					}
 				}
 			case 'S':
 				newShell()
