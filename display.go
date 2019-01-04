@@ -1,20 +1,19 @@
 package main
 
 import (
-	"github.com/nsf/termbox-go"
-	// "github.com/taybart/log"
 	"fmt"
+	"github.com/nsf/termbox-go"
 	"os"
 )
 
-func printLoc(x, y int, format string, v ...interface{}) {
+func debug(x, y int, format string, v ...interface{}) {
 	fg := termbox.ColorDefault
 	bg := termbox.ColorDefault
 	s := fmt.Sprintf(format, v...)
 	printString(x, y, s, fg, bg)
 }
 
-func drawDir(active int, dir []os.FileInfo) {
+func drawDir(active int, dir []os.FileInfo, offset int) {
 	for i, f := range dir {
 		str := f.Name()
 		if f.IsDir() {
@@ -25,7 +24,10 @@ func drawDir(active int, dir []os.FileInfo) {
 		if active == i {
 			bg = termbox.ColorBlue
 		}
-		printString(5, i, str, fg, bg)
+		for len(str) < conf.ColumnWidth {
+			str += " "
+		}
+		printString(5+offset, i, str, fg, bg)
 	}
 }
 
@@ -48,4 +50,26 @@ func setupDisplay() {
 func render() {
 	termbox.Flush()
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+}
+
+func draw(dt directoryTree, cd string) {
+	parentPath := getParentPath(cd)
+	parentFiles := readDir(parentPath)
+	if _, ok := dt[parentPath]; !ok {
+		dt[parentPath] = dt.newDirForParent(cd)
+	}
+	drawDir(dt[parentPath].active, parentFiles, 0)
+
+	files := readDir(".")
+	drawDir(dt[cd].active, files, conf.ColumnWidth)
+
+	if files[dt[cd].active].IsDir() {
+		childPath := cd + "/" + files[dt[cd].active].Name()
+		files := readDir(childPath)
+		if _, ok := dt[childPath]; !ok {
+			dt[childPath] = &dir{active: 0}
+		}
+		drawDir(dt[childPath].active, files, conf.ColumnWidth*2)
+	}
+	render()
 }
