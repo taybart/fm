@@ -21,6 +21,10 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 		if f.IsDir() {
 			str += "/"
 		}
+
+		fg := termbox.ColorDefault
+		bg := termbox.ColorDefault
+
 		if len(str) > width-4 {
 			str = str[:width-3] + "..."
 		}
@@ -28,13 +32,18 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 			str += " "
 		}
 
-		fg := termbox.ColorDefault
-		bg := termbox.ColorDefault
 		if active == i {
 			bg = termbox.ColorBlue
 			if count > 0 {
 				c := strconv.Itoa(count)
 				str = str[:len(str)-(len(c)+1)] + c + " "
+			}
+		}
+
+		if f.IsDir() {
+			fg = termbox.ColorCyan | termbox.AttrBold
+			if active == i {
+				fg = termbox.ColorDefault | termbox.AttrBold
 			}
 		}
 		printString(offset, i, width, str, fg, bg)
