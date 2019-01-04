@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/taybart/log"
 	"io"
-	"io/ioutil"
+	// "io/ioutil"
 	"os"
 	"strings"
 )
@@ -55,9 +55,17 @@ func pruneDirs(dir []os.FileInfo) []os.FileInfo {
 	return pruned
 }
 
-func readDir(dn string) []os.FileInfo {
-	files, err := ioutil.ReadDir(dn)
+func readDir(name string) []os.FileInfo {
+	f, err := os.Open(name)
 	if err != nil {
+		// return false, err
+		log.Errorln(err)
+	}
+	defer f.Close()
+
+	files, err := f.Readdir(0) // Or f.Readdir(1)
+	if err == io.EOF {
+		// return files, nil
 		log.Errorln(err)
 	}
 	files = pruneDirs(files)
