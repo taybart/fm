@@ -7,8 +7,9 @@ import (
 )
 
 type config struct {
-	ShowHidden  bool `json:"showHidden"`
-	ColumnWidth int  `json:"columnWidth"`
+	ShowHidden   bool  `json:"showHidden"`
+	ColumnWidth  int   `json:"columnWidth"`
+	ColumnRatios []int `json:"columnWidths"`
 }
 
 func loadConfig(name string) (config, error) {
@@ -21,8 +22,9 @@ func loadConfig(name string) (config, error) {
 
 	// Default Config
 	c := config{
-		ShowHidden:  false,
-		ColumnWidth: 20,
+		ShowHidden:   false,
+		ColumnWidth:  -1,
+		ColumnRatios: []int{2, 5, 3},
 	}
 
 	jb, err := ioutil.ReadAll(j)

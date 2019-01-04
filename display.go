@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nsf/termbox-go"
 	"os"
+	// "os/exec"
 )
 
 func debug(x, y int, format string, v ...interface{}) {
@@ -13,21 +14,25 @@ func debug(x, y int, format string, v ...interface{}) {
 	printString(x, y, s, fg, bg)
 }
 
-func drawDir(active int, dir []os.FileInfo, offset int) {
+func drawDir(active int, dir []os.FileInfo, offset, width int) {
 	for i, f := range dir {
 		str := f.Name()
 		if f.IsDir() {
 			str += "/"
 		}
+		if len(str) > width-4 {
+			str = str[:width-3] + "..."
+		}
+		for len(str) < width {
+			str += " "
+		}
+
 		fg := termbox.ColorDefault
 		bg := termbox.ColorDefault
 		if active == i {
 			bg = termbox.ColorBlue
 		}
-		for len(str) < conf.ColumnWidth {
-			str += " "
-		}
-		printString(5+offset, i, str, fg, bg)
+		printString(offset, i, str, fg, bg)
 	}
 }
 
@@ -53,15 +58,27 @@ func render() {
 }
 
 func draw(dt directoryTree, cd string) {
+	cr := conf.ColumnRatios
+	cw := conf.ColumnWidth
+
+	if cw < 0 {
+		cw, _ = termbox.Size()
+	}
+
 	parentPath := getParentPath(cd)
 	parentFiles := readDir(parentPath)
 	if _, ok := dt[parentPath]; !ok {
 		dt[parentPath] = dt.newDirForParent(cd)
 	}
-	drawDir(dt[parentPath].active, parentFiles, 0)
+	offset := 0
+	width := int(float64(cr[0]) / 10.0 * float64(cw))
+	drawDir(dt[parentPath].active, parentFiles, offset, width)
 
 	files := readDir(".")
-	drawDir(dt[cd].active, files, conf.ColumnWidth)
+
+	offset = width
+	width = int(float64(cr[1]) / 10.0 * float64(cw))
+	drawDir(dt[cd].active, files, offset, width)
 
 	if files[dt[cd].active].IsDir() {
 		childPath := cd + "/" + files[dt[cd].active].Name()
@@ -69,7 +86,15 @@ func draw(dt directoryTree, cd string) {
 		if _, ok := dt[childPath]; !ok {
 			dt[childPath] = &dir{active: 0}
 		}
-		drawDir(dt[childPath].active, files, conf.ColumnWidth*2)
+		offset += width
+		width = int(float64(cr[2]) / 10.0 * float64(cw))
+		drawDir(dt[childPath].active, files, offset, width)
+		/* } else {
+		n := files[dt[cd].active].Name()
+		cmd := exec.Command("strings", n)
+		buf, _ := cmd.Output()
+		printString(conf.ColumnRatios[2]*conf.ColumnWidth, 0,
+			string(buf), termbox.ColorDefault, termbox.ColorDefault) */
 	}
 	render()
 }

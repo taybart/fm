@@ -19,7 +19,8 @@ func main() {
 	defer termbox.Close()
 
 	var err error
-	conf, err = loadConfig("config.json")
+	home := os.Getenv("HOME")
+	conf, err = loadConfig(home + "/.config/gofm/config.json")
 	if err != nil {
 		log.Errorln(err)
 	}
