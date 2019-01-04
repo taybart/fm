@@ -7,9 +7,10 @@ import (
 )
 
 type config struct {
-	ShowHidden   bool  `json:"showHidden"`
-	ColumnWidth  int   `json:"columnWidth"`
-	ColumnRatios []int `json:"columnWidths"`
+	ShowHidden   bool   `json:"showHidden"`
+	ColumnWidth  int    `json:"columnWidth"`
+	ColumnRatios []int  `json:"columnWidths"`
+	PreviewRegex string `json:"previewRegex"`
 }
 
 func loadConfig(name string) (config, error) {
@@ -25,6 +26,7 @@ func loadConfig(name string) (config, error) {
 		ShowHidden:   false,
 		ColumnWidth:  -1,
 		ColumnRatios: []int{2, 5, 3},
+		PreviewRegex: "",
 	}
 
 	jb, err := ioutil.ReadAll(j)

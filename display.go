@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"github.com/nsf/termbox-go"
 	"os"
+	"os/exec"
 	"strconv"
-	// "os/exec"
 )
 
 func debug(x, y int, format string, v ...interface{}) {
 	fg := termbox.ColorDefault
 	bg := termbox.ColorDefault
 	s := fmt.Sprintf(format, v...)
-	printString(x, y, s, fg, bg)
+	printString(x, y, 10000, s, fg, bg)
 }
 
 func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
@@ -37,14 +37,19 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 				str = str[:len(str)-(len(c)+1)] + c + " "
 			}
 		}
-		printString(offset, i, str, fg, bg)
+		printString(offset, i, width, str, fg, bg)
 	}
 }
 
-func printString(x, y int, s string, fg, bg termbox.Attribute) {
+func printString(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
+	xstart := x
 	for _, c := range s {
 		termbox.SetCell(x, y, c, fg, bg)
 		x++
+		if x > xstart+maxWidth {
+			x = xstart
+			y++
+		}
 	}
 }
 
@@ -81,6 +86,9 @@ func draw(dt directoryTree, cd string) {
 
 	files := readDir(".")
 
+	offset = int(float64(cr[0])/10.0*float64(cw)) +
+		int(float64(cr[1])/10.0*float64(cw))
+	width = int(float64(cr[2]) / 10.0 * float64(cw))
 	count := 0
 	if files[dt[cd].active].IsDir() {
 		childPath := cd + "/" + files[dt[cd].active].Name()
@@ -89,16 +97,14 @@ func draw(dt directoryTree, cd string) {
 		if _, ok := dt[childPath]; !ok {
 			dt[childPath] = &dir{active: 0}
 		}
-		offset = int(float64(cr[0])/10.0*float64(cw)) +
-			int(float64(cr[1])/10.0*float64(cw))
-		width = int(float64(cr[2]) / 10.0 * float64(cw))
 		drawDir(dt[childPath].active, 0, files, offset, width)
-		/* } else {
+	} else {
 		n := files[dt[cd].active].Name()
-		cmd := exec.Command("strings", n)
+		cmd := exec.Command("cat", n)
 		buf, _ := cmd.Output()
-		printString(conf.ColumnRatios[2]*conf.ColumnWidth, 0,
-			string(buf), termbox.ColorDefault, termbox.ColorDefault) */
+		buf = buf[:200]
+		printString(offset, 0, width,
+			string(buf), termbox.ColorDefault, termbox.ColorDefault)
 	}
 	offset = int(float64(cr[0]) / 10.0 * float64(cw))
 	width = int(float64(cr[1]) / 10.0 * float64(cw))
