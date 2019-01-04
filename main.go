@@ -55,9 +55,9 @@ func main() {
 					}
 				}
 			case 'j':
-				if len(files) > 0 {
-					(dt[cd]).active++
-					dt[cd].active %= len(files)
+				if len(files) > 0 && (dt[cd].active < len(files)-1) {
+					dt[cd].active++
+					// dt[cd].active %= len(files)
 				}
 			case 'k':
 				if len(files) > 0 {
