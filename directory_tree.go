@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/taybart/log"
 	"io"
+	"sort"
 	// "io/ioutil"
 	"os"
 	"strings"
@@ -69,6 +70,7 @@ func readDir(name string) []os.FileInfo {
 		log.Errorln(err)
 	}
 	files = pruneDirs(files)
+	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
 	return files
 }
 func isEmpty(name string) (bool, error) {
