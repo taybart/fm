@@ -98,7 +98,7 @@ func draw(dt directoryTree, cd string) {
 			dt[childPath] = &dir{active: 0}
 		}
 		drawDir(dt[childPath].active, 0, files, offset, width)
-	} else {
+	} else if files[dt[cd].active].Size() < 100*1024*1024 {
 		n := files[dt[cd].active].Name()
 		cmd := exec.Command("cat", n)
 		buf, _ := cmd.Output()
