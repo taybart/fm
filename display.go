@@ -44,11 +44,18 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 func printString(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
 	xstart := x
 	for _, c := range s {
-		termbox.SetCell(x, y, c, fg, bg)
-		x++
-		if x > xstart+maxWidth {
+		if c == '\n' {
 			x = xstart
 			y++
+		} else if c == '\r' {
+			x = xstart
+		} else {
+			termbox.SetCell(x, y, c, fg, bg)
+			x++
+			if x > xstart+maxWidth {
+				x = xstart
+				y++
+			}
 		}
 	}
 }
