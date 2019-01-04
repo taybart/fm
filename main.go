@@ -31,12 +31,13 @@ func main() {
 
 	for {
 		cd = pwd()
-		// debug(60, 5, "%s", cd)
 
 		draw(dt, cd)
 
 		files := readDir(".")
 		switch ev := termbox.PollEvent(); ev.Type {
+		case termbox.EventResize:
+			draw(dt, cd)
 		case termbox.EventKey:
 			switch ev.Ch {
 			case 'h':

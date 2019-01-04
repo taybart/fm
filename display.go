@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nsf/termbox-go"
 	"os"
+	"strconv"
 	// "os/exec"
 )
 
@@ -14,7 +15,7 @@ func debug(x, y int, format string, v ...interface{}) {
 	printString(x, y, s, fg, bg)
 }
 
-func drawDir(active int, dir []os.FileInfo, offset, width int) {
+func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 	for i, f := range dir {
 		str := f.Name()
 		if f.IsDir() {
@@ -31,6 +32,10 @@ func drawDir(active int, dir []os.FileInfo, offset, width int) {
 		bg := termbox.ColorDefault
 		if active == i {
 			bg = termbox.ColorBlue
+			if count > 0 {
+				c := strconv.Itoa(count)
+				str = str[:len(str)-(len(c)+1)] + c + " "
+			}
 		}
 		printString(offset, i, str, fg, bg)
 	}
@@ -72,23 +77,22 @@ func draw(dt directoryTree, cd string) {
 	}
 	offset := 0
 	width := int(float64(cr[0]) / 10.0 * float64(cw))
-	drawDir(dt[parentPath].active, parentFiles, offset, width)
+	drawDir(dt[parentPath].active, 0, parentFiles, offset, width)
 
 	files := readDir(".")
 
-	offset = width
-	width = int(float64(cr[1]) / 10.0 * float64(cw))
-	drawDir(dt[cd].active, files, offset, width)
-
+	count := 0
 	if files[dt[cd].active].IsDir() {
 		childPath := cd + "/" + files[dt[cd].active].Name()
 		files := readDir(childPath)
+		count = len(files)
 		if _, ok := dt[childPath]; !ok {
 			dt[childPath] = &dir{active: 0}
 		}
-		offset += width
+		offset = int(float64(cr[0])/10.0*float64(cw)) +
+			int(float64(cr[1])/10.0*float64(cw))
 		width = int(float64(cr[2]) / 10.0 * float64(cw))
-		drawDir(dt[childPath].active, files, offset, width)
+		drawDir(dt[childPath].active, 0, files, offset, width)
 		/* } else {
 		n := files[dt[cd].active].Name()
 		cmd := exec.Command("strings", n)
@@ -96,5 +100,9 @@ func draw(dt directoryTree, cd string) {
 		printString(conf.ColumnRatios[2]*conf.ColumnWidth, 0,
 			string(buf), termbox.ColorDefault, termbox.ColorDefault) */
 	}
+	offset = int(float64(cr[0]) / 10.0 * float64(cw))
+	width = int(float64(cr[1]) / 10.0 * float64(cw))
+	drawDir(dt[cd].active, count, files, offset, width)
+
 	render()
 }
