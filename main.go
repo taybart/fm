@@ -1,7 +1,6 @@
 package main
 
 import (
-	// "container/list"
 	"github.com/nsf/termbox-go"
 	"github.com/taybart/log"
 	"io/ioutil"
