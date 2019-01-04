@@ -1,92 +1,114 @@
 package main
 
 import (
-	// "fmt"
+	// "container/list"
 	"github.com/nsf/termbox-go"
 	"github.com/taybart/log"
 	"io/ioutil"
 	"os"
 )
 
+type directoryTree []dir
+
+type dir struct {
+	active int
+	name   string
+}
+
+var c config
+
 func main() {
+	if os.Getenv("ENV") == "production" {
+		log.SetLevel(log.WARN)
+		log.SetOutput("./gofm.log")
+		log.UseColors = false
+	}
 
 	setupDisplay()
 	defer termbox.Close()
 
-	dirIndex := 0
-	cd, _ := os.Getwd()
-	files, err := ioutil.ReadDir(cd)
+	var err error
+	c, err = loadConfig("config.json")
 	if err != nil {
 		log.Errorln(err)
 	}
-	drawFileCol(dirIndex, files)
-mainloop:
+
+	start := getWd()
+	dt := directoryTree{dir{active: 0, name: start}}
+
+	cd := 0
 	for {
-		cd, _ := os.Getwd()
-		files, err := ioutil.ReadDir(cd)
+		files, err := ioutil.ReadDir(".")
 		if err != nil {
 			log.Errorln(err)
 		}
-		drawFileCol(dirIndex, files)
+		files = pruneDir(files)
 
+		drawDir(dt[cd].active, files)
+
+		render()
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventKey:
 			switch ev.Ch {
 			case 'h':
 				os.Chdir("../")
+				cd--
+				if cd < 0 {
+					cd = 0
+					dn := getWd()
+					dt = dt.unshift(dir{active: 0, name: dn})
+				}
 			case 'l':
-				if files[dirIndex].IsDir() {
-					os.Chdir(files[dirIndex].Name())
-					dirIndex = 0
+				if files[dt[cd].active].IsDir() {
+					dn := files[dt[cd].active].Name()
+					cd++
+					if cd >= len(dt) {
+						dt = dt.push(dir{active: 0, name: dn})
+					}
+					os.Chdir(dn)
 				}
 			case 'j':
-				dirIndex++
-				dirIndex %= len(files)
+				dt[cd].active++
+				dt[cd].active %= len(files)
 			case 'k':
-				dirIndex--
-				if dirIndex < 0 {
-					dirIndex = 0
+				dt[cd].active--
+				if dt[cd].active < 0 {
+					dt[cd].active = 0
 				}
 			case 'q':
-				break mainloop
+				termbox.Close()
+				os.Exit(0)
 			}
 		}
 	}
 }
 
-func drawFileCol(dirIndex int, files []os.FileInfo) {
-	for i, f := range files {
-		active := false
-		if i == dirIndex {
-			active = true
+func (dt directoryTree) unshift(d dir) directoryTree {
+	return append([]dir{d}, dt...)
+}
+
+func (dt directoryTree) push(d dir) directoryTree {
+	return append(dt, d)
+}
+
+func pruneDir(dir []os.FileInfo) []os.FileInfo {
+	pruned := []os.FileInfo{}
+	for _, f := range dir {
+		if rune(f.Name()[0]) == '.' {
+			if c.ShowHidden {
+				pruned = append(pruned, f)
+			}
+		} else {
+			pruned = append(pruned, f)
 		}
-		printLine(0, i, f.Name(), active)
 	}
-	render()
+	return pruned
 }
 
-func printLine(x, y int, s string, active bool) {
-	fg := termbox.ColorDefault
-	bg := termbox.ColorDefault
-	if active {
-		bg = termbox.ColorBlue
-	}
-	for _, c := range s {
-		termbox.SetCell(x, y, c, fg, bg)
-		x++
-	}
-}
-
-func setupDisplay() {
-	err := termbox.Init()
+func getWd() string {
+	cd, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		log.Errorln(err)
 	}
-	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
-	termbox.SetOutputMode(termbox.OutputNormal)
-}
-
-func render() {
-	termbox.Flush()
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	return cd
 }
