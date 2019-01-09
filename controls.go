@@ -15,15 +15,20 @@ const (
 )
 
 func newShell() {
-	termbox.Close()
 	shell, exists := os.LookupEnv("SHELL")
 	if !exists {
 		panic("No $SHELL defined")
 	}
-	cmd := exec.Command(shell)
+	runThis(shell)
+}
+
+func runThis(toRun string, args ...string) error {
+	termbox.Close()
+	cmd := exec.Command(toRun, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Run()
 	setupDisplay()
+	return nil
 }

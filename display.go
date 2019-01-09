@@ -83,13 +83,16 @@ func render() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
 
-func draw(dt directoryTree, cd string) {
+func draw(dt directoryTree, cd, userinput string) {
 	cr := conf.ColumnRatios
 	cw := conf.ColumnWidth
 
 	if cw < 0 {
 		cw, _ = termbox.Size()
 	}
+	tbwidth, tbheight := termbox.Size()
+	printString(0, tbheight-1, tbwidth,
+		userinput, termbox.ColorDefault, termbox.ColorDefault)
 
 	parentPath := getParentPath(cd)
 	parentFiles := readDir(parentPath)

@@ -6,6 +6,15 @@ import (
 	"os"
 )
 
+type goFMState struct {
+	cd     string
+	dir    []os.FileInfo
+	dt     directoryTree
+	cmd    string
+	active os.FileInfo
+	mode   mode
+}
+
 var conf config
 
 func main() {
@@ -14,6 +23,8 @@ func main() {
 		log.SetOutput("./gofm.log")
 		log.UseColors = false
 	}
+
+	s := &goFMState{cmd: "", mode: normal}
 
 	setupDisplay()
 	defer termbox.Close()
@@ -25,52 +36,22 @@ func main() {
 		log.Errorln(err)
 	}
 
-	cd := pwd()
-	dt := make(directoryTree)
-	dt[cd] = &dir{active: 0}
+	s.cd = pwd()
+	s.dt = make(directoryTree)
+	s.dt[s.cd] = &dir{active: 0}
 
 	for {
-		cd = pwd()
+		s.cd = pwd()
+		s.dir = readDir(".")
+		s.active = s.dir[s.dt[s.cd].active]
 
-		draw(dt, cd)
+		draw(s.dt, s.cd, s.cmd)
 
-		files := readDir(".")
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventResize:
-			draw(dt, cd)
+			draw(s.dt, s.cd, s.cmd)
 		case termbox.EventKey:
-			switch ev.Ch {
-			case 'h':
-				if cd != "/" {
-					os.Chdir("../")
-				}
-			case 'l':
-				if len(files) > 0 {
-					if files[dt[cd].active].IsDir() {
-						dn := cd + "/" + files[dt[cd].active].Name()
-						if _, ok := dt[dn]; !ok {
-							dt[dn] = &dir{active: 0}
-						}
-						os.Chdir(dn)
-					}
-				}
-			case 'j':
-				if len(files) > 0 && (dt[cd].active < len(files)-1) {
-					dt[cd].active++
-				}
-			case 'k':
-				if len(files) > 0 {
-					dt[cd].active--
-					if dt[cd].active < 0 {
-						dt[cd].active = 0
-					}
-				}
-			case 'S':
-				newShell()
-			case 'q':
-				termbox.Close()
-				os.Exit(0)
-			}
+			s.KeyParser(ev)
 		}
 	}
 }
