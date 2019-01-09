@@ -1,20 +1,20 @@
 package main
 
-import (
+/* import (
 	"github.com/nsf/termbox-go"
 	"os"
 	"os/exec"
-)
+) */
 
-type command int
+/* type command int
 
 const (
 	noop command = iota
 	updown
 	changedir
-)
+) */
 
-func newShell() {
+/* func newShell() {
 	shell, exists := os.LookupEnv("SHELL")
 	if !exists {
 		panic("No $SHELL defined")
@@ -31,4 +31,4 @@ func runThis(toRun string, args ...string) error {
 	cmd.Run()
 	setupDisplay()
 	return nil
-}
+} */

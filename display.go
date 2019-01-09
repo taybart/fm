@@ -69,6 +69,13 @@ func printString(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
 	}
 }
 
+func printPrompt(s string) {
+	tbwidth, tbheight := termbox.Size()
+	printString(tbwidth/4, tbheight/2, tbwidth,
+		s, termbox.ColorDefault, termbox.ColorDefault)
+	render()
+}
+
 func setupDisplay() {
 	err := termbox.Init()
 	if err != nil {

@@ -11,6 +11,7 @@ type config struct {
 	ColumnWidth  int    `json:"columnWidth"`
 	ColumnRatios []int  `json:"columnWidths"`
 	PreviewRegex string `json:"previewRegex"`
+	JumpAmount   int    `json:"jumpAmount"`
 }
 
 func loadConfig(name string) (config, error) {
@@ -26,6 +27,7 @@ func loadConfig(name string) (config, error) {
 		ShowHidden:   false,
 		ColumnWidth:  -1,
 		ColumnRatios: []int{2, 5, 3},
+		JumpAmount:   5,
 		PreviewRegex: "",
 	}
 
