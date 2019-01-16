@@ -21,7 +21,7 @@ func main() {
 	var err error
 	home := os.Getenv("HOME")
 	log.UseColors = false
-	log.SetOutput("./gofm.log")
+	log.SetOutput(home + "/.config/gofm/gofm.log")
 	if os.Getenv("ENV") == "production" {
 		log.SetLevel(log.WARN)
 		conf, err = loadConfig(home + "/.config/gofm/config.json")
@@ -54,7 +54,6 @@ func main() {
 		}
 
 		s.cd = pwd()
-		log.Infoln(s.cd)
 		// Bounds check
 		if s.dt[s.cd].active > len(s.dir)-1 {
 			s.dt[s.cd].active = len(s.dir) - 1
