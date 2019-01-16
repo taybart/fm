@@ -127,6 +127,9 @@ func draw(dt directoryTree, cd, userinput string) {
 		// Draw child directory or preview file < 100KB in last column
 		if files[dt[cd].active].IsDir() {
 			childPath := cd + "/" + files[dt[cd].active].Name()
+			if cd == "/" {
+				childPath = cd + files[dt[cd].active].Name()
+			}
 			files, err := readDir(childPath)
 			if err != nil {
 				panic(err) // @TODO: tmp
@@ -163,10 +166,10 @@ func draw(dt directoryTree, cd, userinput string) {
 		printString(0, 0, tbwidth, ustr, termbox.ColorGreen, termbox.ColorDefault)
 		// printString(len(ustr)+1, 0, tbwidth, cd, cdFG, termbox.ColorDefault)
 		dn := cd
-		o := 0
+		oset := 0
 		if cd != "/" {
 			dn += "/"
-			o = 1
+			oset = 1
 		}
 
 		printString(len(ustr)+1, 0, tbwidth, dn, termbox.ColorBlue, termbox.ColorDefault)
@@ -175,7 +178,7 @@ func draw(dt directoryTree, cd, userinput string) {
 		if f.IsDir() {
 			name += "/"
 		}
-		printString(len(ustr)+len(cd)+1+o, 0, tbwidth, name,
+		printString(len(ustr)+len(cd)+1+oset, 0, tbwidth, name,
 			termbox.ColorDefault, termbox.ColorDefault)
 	}
 

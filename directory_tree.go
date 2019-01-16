@@ -77,6 +77,9 @@ func pruneDirs(dir []os.FileInfo) []os.FileInfo {
 func readDir(name string) ([]os.FileInfo, error) {
 	f, err := os.Open(name)
 	if err != nil {
+		if os.IsPermission(err) {
+			return nil, nil
+		}
 		w := fmt.Sprintf("filename: %s", name)
 		return nil, errors.Wrap(err, w)
 	}
