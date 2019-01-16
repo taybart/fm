@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
 	"github.com/taybart/log"
 	"io"
 	"sort"
@@ -18,19 +20,35 @@ type directoryTree map[string]*dir
 func getParentPath(cd string) string {
 	dirs := strings.Split(cd, "/")
 	tmp := dirs[:len(dirs)-1]
+	if len(tmp) == 1 && cd != "/" {
+		return "/"
+	}
 
 	return strings.Join(tmp, "/")
 }
 
-func getParentName(cd string) string {
+func getParentName(cd string) (string, error) {
+	if cd == "/" {
+		return "", errors.New("Root directory")
+	}
 	dirs := strings.Split(cd, "/")
-	return dirs[len(dirs)-1]
+	/* if len(dirs) == 1 {
+		return "", errors.New("")
+	} */
+	return dirs[len(dirs)-1], nil
 }
 
 func (dt directoryTree) newDirForParent(cd string) *dir {
 	pp := getParentPath(cd)
-	p := getParentName(cd)
-	fs := readDir(pp)
+	p, err := getParentName(cd)
+	if err != nil {
+		return &dir{active: 0}
+		// panic(err) // @TODO: tmp
+	}
+	fs, err := readDir(pp)
+	if err != nil {
+		panic(err) // @TODO: tmp
+	}
 
 	a := 0
 	for _, f := range fs {
@@ -56,22 +74,22 @@ func pruneDirs(dir []os.FileInfo) []os.FileInfo {
 	return pruned
 }
 
-func readDir(name string) []os.FileInfo {
+func readDir(name string) ([]os.FileInfo, error) {
 	f, err := os.Open(name)
 	if err != nil {
-		// return false, err
-		log.Errorln(err)
+		w := fmt.Sprintf("filename: %s", name)
+		return nil, errors.Wrap(err, w)
 	}
 	defer f.Close()
 
 	files, err := f.Readdir(0) // Or f.Readdir(1)
 	if err == io.EOF {
-		// return files, nil
-		log.Errorln(err)
+		w := fmt.Sprintf("filename: %s", name)
+		return nil, errors.Wrap(err, w)
 	}
 	files = pruneDirs(files)
 	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
-	return files
+	return files, nil
 }
 func isEmpty(name string) (bool, error) {
 	f, err := os.Open(name)

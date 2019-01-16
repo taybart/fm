@@ -30,7 +30,7 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 		bg := termbox.ColorDefault
 
 		if len(str) > width-4 {
-			str = str[:width-3] + "..."
+			str = str[:width-3] + ".."
 		}
 		for len(str) < width-1 {
 			str += " "
@@ -103,10 +103,13 @@ func draw(dt directoryTree, cd, userinput string) {
 		cw = tbwidth
 	}
 
-	files := readDir(".")
+	files, err := readDir(".")
+	if err != nil {
+		panic(err) // @TODO: tmp
+	}
 
 	parentPath := getParentPath(cd)
-	parentFiles := readDir(parentPath)
+	parentFiles, err := readDir(parentPath)
 	if _, ok := dt[parentPath]; !ok {
 		dt[parentPath] = dt.newDirForParent(cd)
 	}
@@ -124,7 +127,10 @@ func draw(dt directoryTree, cd, userinput string) {
 		// Draw child directory or preview file < 100KB in last column
 		if files[dt[cd].active].IsDir() {
 			childPath := cd + "/" + files[dt[cd].active].Name()
-			files := readDir(childPath)
+			files, err := readDir(childPath)
+			if err != nil {
+				panic(err) // @TODO: tmp
+			}
 			count = len(files)
 			if _, ok := dt[childPath]; !ok {
 				dt[childPath] = &dir{active: 0}
@@ -156,13 +162,20 @@ func draw(dt directoryTree, cd, userinput string) {
 		ustr := un + "@" + hn
 		printString(0, 0, tbwidth, ustr, termbox.ColorGreen, termbox.ColorDefault)
 		// printString(len(ustr)+1, 0, tbwidth, cd, cdFG, termbox.ColorDefault)
-		printString(len(ustr)+1, 0, tbwidth, cd+"/", termbox.ColorBlue, termbox.ColorDefault)
+		dn := cd
+		o := 0
+		if cd != "/" {
+			dn += "/"
+			o = 1
+		}
+
+		printString(len(ustr)+1, 0, tbwidth, dn, termbox.ColorBlue, termbox.ColorDefault)
 		f := files[dt[cd].active]
 		name := f.Name()
 		if f.IsDir() {
 			name += "/"
 		}
-		printString(len(ustr)+len(cd)+2, 0, tbwidth, name,
+		printString(len(ustr)+len(cd)+1+o, 0, tbwidth, name,
 			termbox.ColorDefault, termbox.ColorDefault)
 	}
 

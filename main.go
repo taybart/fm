@@ -18,10 +18,23 @@ type goFMState struct {
 var conf config
 
 func main() {
+	var err error
+	home := os.Getenv("HOME")
+	log.UseColors = false
+	log.SetOutput("./gofm.log")
 	if os.Getenv("ENV") == "production" {
 		log.SetLevel(log.WARN)
-		log.SetOutput("./gofm.log")
-		log.UseColors = false
+		conf, err = loadConfig(home + "/.config/gofm/config.json")
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		log.SetLevel(log.DEBUG)
+		conf, err = loadConfig(home + "/.config/gofm/config.json")
+		if err != nil {
+			log.Errorln(err)
+			os.Exit(1)
+		}
 	}
 
 	s := &goFMState{cmd: "", mode: normal}
@@ -29,20 +42,26 @@ func main() {
 	setupDisplay()
 	defer termbox.Close()
 
-	var err error
-	home := os.Getenv("HOME")
-	conf, err = loadConfig(home + "/.config/gofm/config.json")
-	if err != nil {
-		log.Errorln(err)
-	}
-
 	s.cd = pwd()
 	s.dt = make(directoryTree)
 	s.dt[s.cd] = &dir{active: 0}
 
 	for {
+
+		s.dir, err = readDir(".")
+		if err != nil {
+			panic(err)
+		}
+
 		s.cd = pwd()
-		s.dir = readDir(".")
+		log.Infoln(s.cd)
+		// Bounds check
+		if s.dt[s.cd].active > len(s.dir)-1 {
+			s.dt[s.cd].active = len(s.dir) - 1
+		}
+		if s.dt[s.cd].active < 0 {
+			s.dt[s.cd].active = 0
+		}
 		s.active = s.dir[s.dt[s.cd].active]
 
 		draw(s.dt, s.cd, s.cmd)

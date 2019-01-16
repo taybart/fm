@@ -18,6 +18,7 @@ const (
 func (s *goFMState) KeyParser(ev termbox.Event) {
 	ch := ev.Ch
 	key := ev.Key
+
 	switch s.mode {
 	case input:
 		switch key {
@@ -50,6 +51,9 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 			if len(s.dir) > 0 {
 				if s.active.IsDir() {
 					dn := s.cd + "/" + s.active.Name()
+					if s.cd == "/" {
+						dn = s.cd + s.active.Name()
+					}
 					if _, ok := s.dt[dn]; !ok {
 						s.dt[dn] = &dir{active: 0}
 					}
@@ -59,27 +63,21 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		case key == termbox.KeyCtrlJ:
 			if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
 				s.dt[s.cd].active += conf.JumpAmount
-				if s.dt[s.cd].active > len(s.dir)-1 {
-					s.dt[s.cd].active = len(s.dir) - 1
-				}
+				// if s.dt[s.cd].active > len(s.dir)-1 {
+				// s.dt[s.cd].active = len(s.dir) - 1
+				// }
 			}
 		case ch == 'j':
-			if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
+			if len(s.dir) > 0 {
 				s.dt[s.cd].active++
 			}
 		case key == termbox.KeyCtrlK:
 			if len(s.dir) > 0 {
 				s.dt[s.cd].active -= conf.JumpAmount
-				if s.dt[s.cd].active < 0 {
-					s.dt[s.cd].active = 0
-				}
 			}
 		case ch == 'k':
 			if len(s.dir) > 0 {
 				s.dt[s.cd].active--
-				if s.dt[s.cd].active < 0 {
-					s.dt[s.cd].active = 0
-				}
 			}
 		/* Special */
 		case ch == ':':
@@ -90,8 +88,18 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		case ch == 'q':
 			termbox.Close()
 			os.Exit(0)
+		default:
+			// push input onto stack
 		}
 	}
+}
+
+func (s *goFMState) changeDirectory(file string) {
+	dn := s.cd + "/" + s.active.Name()
+	if _, ok := s.dt[dn]; !ok {
+		s.dt[dn] = &dir{active: 0}
+	}
+	os.Chdir(dn)
 }
 
 func (s *goFMState) RunCommand() {
@@ -103,12 +111,16 @@ func (s *goFMState) RunCommand() {
 	}
 	cmd := args[0][1:]
 	switch cmd {
+	case "cd":
+		os.Chdir(args[1])
 	case "d", "delete":
 		deleteFile(s.active)
 	case "rn", "rename":
 		renameFile(s.active, args[1])
 	case "e", "edit":
 		editFile(s.active)
+	case "th":
+		conf.ShowHidden = !conf.ShowHidden
 	case "sh", "shell":
 		newShell()
 	case "q", "quit":
