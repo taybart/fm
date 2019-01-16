@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"github.com/nsf/termbox-go"
+	// "github.com/taybart/log"
 	"os"
 	"os/exec"
 	"strconv"
 )
 
 const (
-	topOffset = 2
+	topOffset = 1
 )
 
 func debug(x, y int, format string, v ...interface{}) {
@@ -34,6 +35,11 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 		}
 		for len(str) < width-1 {
 			str += " "
+		}
+
+		m := f.Mode()
+		if (m & 0111) != 0 {
+			fg = termbox.ColorYellow | termbox.AttrBold
 		}
 
 		if active == i {
@@ -141,9 +147,11 @@ func draw(dt directoryTree, cd, userinput string) {
 			drawDir(dt[childPath].active, 0, files, offset, width)
 		} else if files[dt[cd].active].Size() < 100*1024*1024 {
 			n := files[dt[cd].active].Name()
+			// cmd := exec.Command("/Users/taylor/Downloads/vimpager/vimcat", "-o", "-", n)
 			cmd := exec.Command("cat", n)
 			buf, _ := cmd.Output()
 			buf = buf[:200]
+			// log.Infoln(string(buf))
 			printString(offset, topOffset, width,
 				string(buf), termbox.ColorDefault, termbox.ColorDefault)
 		}
