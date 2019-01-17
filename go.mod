@@ -1,4 +1,4 @@
-module github.com/taybart/gofm
+module github.com/taybart/fm
 
 require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
