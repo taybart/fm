@@ -13,7 +13,7 @@ type mode int
 const (
 	normal mode = iota
 	command
-	commandsingle
+	single
 	confirm
 )
 
@@ -32,7 +32,7 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 	key := ev.Key
 
 	switch s.mode {
-	case commandsingle:
+	case single:
 		s.cmd = string(ev.Ch)
 		s.mode = normal
 		s.RunLetterCommand()
@@ -63,7 +63,7 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 			if a.lagmode == command {
 				s.RunFullCommand()
 			}
-			if a.lagmode == commandsingle {
+			if a.lagmode == single {
 				s.RunLetterCommand()
 			}
 			a.confirmed = false
@@ -96,6 +96,7 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 					dn = s.active.symName
 				}
 			}
+			// if a new directory name exists go there
 			if dn != "" {
 				if s.cd == "/" {
 					dn = s.cd + s.active.name
@@ -123,8 +124,8 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 				s.dt[s.cd].active--
 			}
 		/* Special */
-		case ch == 'z':
-			s.mode = commandsingle
+		case ch == 'e':
+			s.mode = single
 		case ch == ':':
 			s.cmd = ":"
 			s.mode = command
@@ -147,8 +148,7 @@ func (s *goFMState) changeDirectory(file string) {
 }
 
 func (s *goFMState) RunLetterCommand() {
-
-	a.lagmode = commandsingle
+	a.lagmode = single
 	switch s.cmd {
 	case "d":
 		deleteFile(s)
