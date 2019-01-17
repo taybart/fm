@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
+	"github.com/taybart/log"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,26 +12,38 @@ type mode int
 
 const (
 	normal mode = iota
-	input
+	command
+	commandsingle
 	confirm
 )
+
+var a = struct { // action
+	cmd       string
+	confirmed bool
+}{confirmed: false}
+
+var deletedFiles = []string{}
 
 func (s *goFMState) KeyParser(ev termbox.Event) {
 	ch := ev.Ch
 	key := ev.Key
 
 	switch s.mode {
-	case input:
+	case commandsingle:
+		s.cmd = string(ev.Ch)
+		s.mode = normal
+		s.RunLetterCommand()
+		s.cmd = ""
+	case command:
 		switch key {
 		case termbox.KeyEsc:
 			s.mode = normal
 			s.cmd = ""
 		case termbox.KeyEnter:
-			if len(s.cmd) > 1 {
-				s.RunCommand()
-			}
 			s.mode = normal
-			s.cmd = ""
+			if len(s.cmd) > 1 {
+				s.RunFullCommand()
+			}
 		case termbox.KeyBackspace, termbox.KeyBackspace2:
 			if len(s.cmd) > 1 {
 				s.cmd = s.cmd[:len(s.cmd)-1]
@@ -40,6 +53,15 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		default:
 			s.cmd += string(ev.Ch)
 		}
+	case confirm:
+		s.mode = normal
+		if ev.Ch == 'Y' || ev.Ch == 'y' {
+			s.cmd = a.cmd
+			a.confirmed = true
+			s.RunFullCommand()
+			a.confirmed = false
+		}
+		s.cmd = ""
 	case normal:
 		switch {
 		/* Movement */
@@ -63,9 +85,6 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		case key == termbox.KeyCtrlJ:
 			if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
 				s.dt[s.cd].active += conf.JumpAmount
-				// if s.dt[s.cd].active > len(s.dir)-1 {
-				// s.dt[s.cd].active = len(s.dir) - 1
-				// }
 			}
 		case ch == 'j':
 			if len(s.dir) > 0 {
@@ -80,14 +99,15 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 				s.dt[s.cd].active--
 			}
 		/* Special */
+		case ch == 'z':
+			s.mode = commandsingle
 		case ch == ':':
 			s.cmd = ":"
-			s.mode = input
+			s.mode = command
 		case ch == 'S':
 			newShell()
 		case ch == 'q':
-			termbox.Close()
-			os.Exit(0)
+			finalize()
 		default:
 			// push input onto stack
 		}
@@ -102,7 +122,20 @@ func (s *goFMState) changeDirectory(file string) {
 	os.Chdir(dn)
 }
 
-func (s *goFMState) RunCommand() {
+func (s *goFMState) RunLetterCommand() {
+	switch s.cmd {
+	case "d":
+		deleteFile(s)
+	case "u":
+		undeleteFile()
+	case "e":
+		editFile(s.active)
+	case "h":
+		conf.ShowHidden = !conf.ShowHidden
+	}
+
+}
+func (s *goFMState) RunFullCommand() {
 	args := strings.Split(s.cmd, " ")
 	if s.cmd[1] == '!' {
 		cmd := strings.Split(args[0], "!")
@@ -114,7 +147,9 @@ func (s *goFMState) RunCommand() {
 	case "cd":
 		os.Chdir(args[1])
 	case "d", "delete":
-		deleteFile(s.active)
+		deleteFile(s)
+	case "ud", "undelete":
+		undeleteFile()
 	case "rn", "rename":
 		renameFile(s.active, args[1])
 	case "e", "edit":
@@ -126,6 +161,15 @@ func (s *goFMState) RunCommand() {
 	case "q", "quit":
 		finalize()
 	}
+	// check that we are done and clear
+	if s.mode == normal {
+		s.cmd = ""
+	}
+}
+
+func (s *goFMState) getConfirmation(action string) {
+	s.cmd = "Confirm " + action + " [Yy]: "
+	s.mode = confirm
 }
 
 func meetsExitCondition(k termbox.Key) bool {
@@ -171,29 +215,41 @@ func renameFile(file os.FileInfo, newName string) {
 func copyFile() {
 }
 
-func deleteFile(file os.FileInfo) {
-	if getConfirmation("deletion") {
-		moveToTrash(file)
+func deleteFile(s *goFMState) {
+	if a.confirmed {
+		moveToTrash(s.active.Name())
+	} else {
+		a.cmd = s.cmd
+		s.getConfirmation("deletion")
+	}
+}
+func undeleteFile() {
+	if len(deletedFiles) != 0 {
+		home, _ := os.LookupEnv("HOME")
+		t := deletedFiles
+		last := t[len(t)-1]
+		deletedFiles = t[:len(t)-1] // pop
+		tf := home + "/.tmp/gofm_trash/" + last
+		os.Rename(tf, last)
 	}
 }
 
-func moveToTrash(file os.FileInfo) {
-}
-
-func getConfirmation(action string) bool {
-	printPrompt("Confirm " + action + " [Yy]")
-	switch ev := termbox.PollEvent(); ev.Type {
-	case termbox.EventKey:
-		switch ev.Ch {
-		case 'y', 'Y':
-			return true
+func moveToTrash(fn string) {
+	home, _ := os.LookupEnv("HOME")
+	if exists, err := fileExists(home + "/.tmp/gofm_trash/"); !exists {
+		if err != nil {
+			log.Errorln(err)
 		}
+		os.MkdirAll(home+"/.tmp/gofm_trash/", os.ModeDir|0755)
 	}
-	return false
+	os.Rename(fn, home+"/.tmp/gofm_trash/"+fn)
+	deletedFiles = append(deletedFiles, fn)
 }
 
 func takeOutTrash() {
-
+	home, _ := os.LookupEnv("HOME")
+	os.RemoveAll(home + "/.tmp/gofm_trash/")
+	os.MkdirAll(home+"/.tmp/gofm_trash/", os.ModeDir|0755)
 }
 
 func finalize() {

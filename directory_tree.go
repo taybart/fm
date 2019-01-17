@@ -94,7 +94,7 @@ func readDir(name string) ([]os.FileInfo, error) {
 	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
 	return files, nil
 }
-func isEmpty(name string) (bool, error) {
+func dirIsEmpty(name string) (bool, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
@@ -114,4 +114,14 @@ func pwd() string {
 		log.Errorln(err)
 	}
 	return cd
+}
+
+func fileExists(fn string) (bool, error) {
+	if _, err := os.Stat(fn); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

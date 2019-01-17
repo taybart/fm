@@ -8,6 +8,7 @@ import (
 
 type config struct {
 	ShowHidden   bool   `json:"showHidden"`
+	WrapText     bool   `json:"wrapText"`
 	ColumnWidth  int    `json:"columnWidth"`
 	ColumnRatios []int  `json:"columnWidths"`
 	PreviewRegex string `json:"previewRegex"`
@@ -25,6 +26,7 @@ func loadConfig(name string) (config, error) {
 	// Default Config
 	c := config{
 		ShowHidden:   false,
+		WrapText:     true,
 		ColumnWidth:  -1,
 		ColumnRatios: []int{2, 5, 3},
 		JumpAmount:   5,

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/nsf/termbox-go"
-	// "github.com/taybart/log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -21,7 +20,16 @@ func debug(x, y int, format string, v ...interface{}) {
 }
 
 func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
+	_, tbheight := termbox.Size()
+	oob := 0
+	if active+3 > tbheight {
+		oob = active + 3 - tbheight
+		dir = dir[oob:]
+	}
 	for i, f := range dir {
+		if i+topOffset == tbheight-1 {
+			break
+		}
 		str := f.Name()
 		if f.IsDir() {
 			str += "/"
@@ -42,7 +50,7 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 			fg = termbox.ColorYellow | termbox.AttrBold
 		}
 
-		if active == i {
+		if active == i+oob {
 			bg = termbox.ColorBlue
 			if count > 0 {
 				c := strconv.Itoa(count)
@@ -60,6 +68,23 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 	}
 }
 
+func printStringNoWrap(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
+	xstart := x
+	for _, c := range s {
+		if c == '\n' {
+			x = xstart
+			y++
+		} else if c == '\r' {
+			x = xstart
+		} else {
+			termbox.SetCell(x, y, c, fg, bg)
+			x++
+			if x > xstart+maxWidth {
+				break
+			}
+		}
+	}
+}
 func printString(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
 	xstart := x
 	for _, c := range s {
@@ -150,10 +175,16 @@ func draw(dt directoryTree, cd, userinput string) {
 			// cmd := exec.Command("/Users/taylor/Downloads/vimpager/vimcat", "-o", "-", n)
 			cmd := exec.Command("cat", n)
 			buf, _ := cmd.Output()
-			buf = buf[:200]
-			// log.Infoln(string(buf))
-			printString(offset, topOffset, width,
-				string(buf), termbox.ColorDefault, termbox.ColorDefault)
+			if len(buf) > cw*tbheight {
+				buf = buf[:200]
+			}
+			if conf.WrapText {
+				printString(offset, topOffset, width,
+					string(buf), termbox.ColorDefault, termbox.ColorDefault)
+			} else {
+				printStringNoWrap(offset, topOffset, width,
+					string(buf), termbox.ColorDefault, termbox.ColorDefault)
+			}
 		}
 	}
 
