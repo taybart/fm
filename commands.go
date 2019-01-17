@@ -33,7 +33,6 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		s.cmd = string(ev.Ch)
 		s.mode = normal
 		s.RunLetterCommand()
-		s.cmd = ""
 	case command:
 		switch key {
 		case termbox.KeyEsc:
@@ -132,6 +131,10 @@ func (s *goFMState) RunLetterCommand() {
 		editFile(s.active)
 	case "h":
 		conf.ShowHidden = !conf.ShowHidden
+	}
+	// check that we are done and clear
+	if s.mode == normal {
+		s.cmd = ""
 	}
 
 }
