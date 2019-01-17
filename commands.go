@@ -75,17 +75,18 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 				os.Chdir("../")
 			}
 		case ch == 'l':
-			if len(s.dir) > 0 {
-				if s.active.IsDir() {
-					dn := s.cd + "/" + s.active.Name()
-					if s.cd == "/" {
-						dn = s.cd + s.active.Name()
-					}
-					if _, ok := s.dt[dn]; !ok {
-						s.dt[dn] = &dir{active: 0}
-					}
-					os.Chdir(dn)
+			if len(s.dir) == 0 {
+				break
+			}
+			if s.active.isDir {
+				dn := s.cd + "/" + s.active.name
+				if s.cd == "/" {
+					dn = s.cd + s.active.name
 				}
+				if _, ok := s.dt[dn]; !ok {
+					s.dt[dn] = &dir{active: 0}
+				}
+				os.Chdir(dn)
 			}
 		case key == termbox.KeyCtrlJ:
 			if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
@@ -120,7 +121,7 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 }
 
 func (s *goFMState) changeDirectory(file string) {
-	dn := s.cd + "/" + s.active.Name()
+	dn := s.cd + "/" + s.active.name
 	if _, ok := s.dt[dn]; !ok {
 		s.dt[dn] = &dir{active: 0}
 	}
@@ -133,6 +134,8 @@ func (s *goFMState) RunLetterCommand() {
 	switch s.cmd {
 	case "d":
 		deleteFile(s)
+	case "D":
+		deleteFileFull(s)
 	case "u":
 		undeleteFile()
 	case "e":
@@ -161,6 +164,8 @@ func (s *goFMState) RunFullCommand() {
 		os.Chdir(args[1])
 	case "d", "delete":
 		deleteFile(s)
+	case "D":
+		deleteFileFull(s)
 	case "ud", "undelete":
 		undeleteFile()
 	case "rn", "rename":
@@ -211,15 +216,15 @@ func newShell() {
 	runThis(shell)
 }
 
-func editFile(file os.FileInfo) {
+func editFile(file pseudofile) {
 	editor, exists := os.LookupEnv("EDITOR")
 	if !exists {
 		panic("No $EDITOR defined")
 	}
-	runThis(editor, file.Name())
+	runThis(editor, file.name)
 }
-func renameFile(file os.FileInfo, newName string) {
-	err := os.Rename(file.Name(), newName)
+func renameFile(file pseudofile, newName string) {
+	err := os.Rename(file.name, newName)
 	if err != nil {
 		panic(err)
 	}
@@ -228,9 +233,17 @@ func renameFile(file os.FileInfo, newName string) {
 func copyFile() {
 }
 
+func deleteFileFull(s *goFMState) {
+	if a.confirmed {
+		os.Remove(s.active.name)
+	} else {
+		a.cmd = s.cmd
+		s.getConfirmation("deletion")
+	}
+}
 func deleteFile(s *goFMState) {
 	if a.confirmed {
-		moveToTrash(s.active.Name())
+		moveToTrash(s.active.name)
 	} else {
 		a.cmd = s.cmd
 		s.getConfirmation("deletion")

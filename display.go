@@ -19,7 +19,7 @@ func debug(x, y int, format string, v ...interface{}) {
 	printString(x, y, 10000, s, fg, bg)
 }
 
-func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
+func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 	_, tbheight := termbox.Size()
 	oob := 0
 	if active+3 > tbheight {
@@ -30,8 +30,8 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 		if i+topOffset == tbheight-1 {
 			break
 		}
-		str := f.Name()
-		if f.IsDir() {
+		str := f.name
+		if f.isDir {
 			str += "/"
 		}
 
@@ -45,23 +45,26 @@ func drawDir(active int, count int, dir []os.FileInfo, offset, width int) {
 			str += " "
 		}
 
-		m := f.Mode()
-		if (m & 0111) != 0 {
-			fg = termbox.ColorYellow | termbox.AttrBold
-		}
+		if f.isReal {
+			m := f.f.Mode()
+			if (m & 0111) != 0 {
+				fg = termbox.ColorYellow | termbox.AttrBold
+			}
 
+			if f.isDir {
+				fg = termbox.ColorCyan | termbox.AttrBold
+				if active == i+oob {
+					fg = termbox.ColorDefault | termbox.AttrBold
+				}
+			}
+		} else {
+			fg = termbox.ColorDefault
+		}
 		if active == i+oob {
 			bg = termbox.ColorBlue
-			if count > 0 {
+			if f.isDir {
 				c := strconv.Itoa(count)
 				str = str[:len(str)-(len(c)+1)] + c + " "
-			}
-		}
-
-		if f.IsDir() {
-			fg = termbox.ColorCyan | termbox.AttrBold
-			if active == i {
-				fg = termbox.ColorDefault | termbox.AttrBold
 			}
 		}
 		printString(offset, i+topOffset, width, str, fg, bg)
@@ -134,13 +137,13 @@ func draw(dt directoryTree, cd, userinput string) {
 		cw = tbwidth
 	}
 
-	files, err := readDir(".")
+	files, amtFiles, err := readDir(".")
 	if err != nil {
 		panic(err) // @TODO: tmp
 	}
 
 	parentPath := getParentPath(cd)
-	parentFiles, err := readDir(parentPath)
+	parentFiles, _, err := readDir(parentPath)
 	if _, ok := dt[parentPath]; !ok {
 		dt[parentPath] = dt.newDirForParent(cd)
 	}
@@ -148,7 +151,7 @@ func draw(dt directoryTree, cd, userinput string) {
 	// Draw parent dir in first column
 	offset := 0
 	width := int(float64(cr[0]) / 10.0 * float64(cw))
-	drawDir(dt[parentPath].active, 0, parentFiles, offset, width)
+	drawDir(dt[parentPath].active, amtFiles, parentFiles, offset, width)
 
 	offset = int(float64(cr[0])/10.0*float64(cw)) +
 		int(float64(cr[1])/10.0*float64(cw))
@@ -156,22 +159,27 @@ func draw(dt directoryTree, cd, userinput string) {
 	count := 0
 	if len(files) > 0 {
 		// Draw child directory or preview file < 100KB in last column
-		if files[dt[cd].active].IsDir() {
-			childPath := cd + "/" + files[dt[cd].active].Name()
+		if files[dt[cd].active].isDir {
+			childPath := cd + "/" + files[dt[cd].active].name
 			if cd == "/" {
-				childPath = cd + files[dt[cd].active].Name()
+				childPath = cd + files[dt[cd].active].name
 			}
-			files, err := readDir(childPath)
+			files, c, err := readDir(childPath)
 			if err != nil {
 				panic(err) // @TODO: tmp
 			}
-			count = len(files)
+			if files[0].isReal {
+				count = c
+			}
 			if _, ok := dt[childPath]; !ok {
 				dt[childPath] = &dir{active: 0}
 			}
 			drawDir(dt[childPath].active, 0, files, offset, width)
-		} else if files[dt[cd].active].Size() < 100*1024*1024 {
-			n := files[dt[cd].active].Name()
+
+		} else if files[dt[cd].active].isReal &&
+			files[dt[cd].active].f.Size() < 100*1024*1024 {
+
+			n := files[dt[cd].active].name
 			// cmd := exec.Command("/Users/taylor/Downloads/vimpager/vimcat", "-o", "-", n)
 			cmd := exec.Command("cat", n)
 			buf, _ := cmd.Output()
@@ -213,8 +221,8 @@ func draw(dt directoryTree, cd, userinput string) {
 
 		printString(len(ustr)+1, 0, tbwidth, dn, termbox.ColorBlue, termbox.ColorDefault)
 		f := files[dt[cd].active]
-		name := f.Name()
-		if f.IsDir() {
+		name := f.name
+		if f.isDir {
 			name += "/"
 		}
 		printString(len(ustr)+len(cd)+1+oset, 0, tbwidth, name,
@@ -227,11 +235,13 @@ func draw(dt directoryTree, cd, userinput string) {
 			userinput, termbox.ColorDefault, termbox.ColorDefault)
 	} else {
 		f := files[dt[cd].active]
-		s := fmt.Sprintf("%s %d %s %s",
-			f.Mode(), f.Size(),
-			f.ModTime().Format("Jan 2 15:04"), f.Name())
-		printString(0, tbheight-1, tbwidth,
-			s, termbox.ColorDefault, termbox.ColorDefault)
+		if f.isReal {
+			s := fmt.Sprintf("%s %d %s %s",
+				f.f.Mode(), f.f.Size(),
+				f.f.ModTime().Format("Jan 2 15:04"), f.name)
+			printString(0, tbheight-1, tbwidth,
+				s, termbox.ColorDefault, termbox.ColorDefault)
+		}
 	}
 
 	render()

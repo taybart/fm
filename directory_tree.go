@@ -15,6 +15,12 @@ type dir struct {
 	active int
 	name   string
 }
+type pseudofile struct {
+	name   string
+	isDir  bool
+	isReal bool
+	f      os.FileInfo
+}
 type directoryTree map[string]*dir
 
 func getParentPath(cd string) string {
@@ -45,14 +51,14 @@ func (dt directoryTree) newDirForParent(cd string) *dir {
 		return &dir{active: 0}
 		// panic(err) // @TODO: tmp
 	}
-	fs, err := readDir(pp)
+	fs, _, err := readDir(pp)
 	if err != nil {
 		panic(err) // @TODO: tmp
 	}
 
 	a := 0
 	for _, f := range fs {
-		if f.Name() == p {
+		if f.name == p {
 			break
 		}
 		a++
@@ -74,26 +80,35 @@ func pruneDirs(dir []os.FileInfo) []os.FileInfo {
 	return pruned
 }
 
-func readDir(name string) ([]os.FileInfo, error) {
+func readDir(name string) ([]pseudofile, int, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		if os.IsPermission(err) {
-			return nil, nil
+			return nil, 0, nil
 		}
 		w := fmt.Sprintf("filename: %s", name)
-		return nil, errors.Wrap(err, w)
+		return nil, 0, errors.Wrap(err, w)
 	}
 	defer f.Close()
 
 	files, err := f.Readdir(0) // Or f.Readdir(1)
 	if err == io.EOF {
 		w := fmt.Sprintf("filename: %s", name)
-		return nil, errors.Wrap(err, w)
+		return nil, 0, errors.Wrap(err, w)
 	}
+	count := len(files)
 	files = pruneDirs(files)
 	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
-	return files, nil
+	pfs := make([]pseudofile, len(files))
+	for i, f := range files {
+		pfs[i] = pseudofile{name: f.Name(), isDir: f.IsDir(), isReal: true, f: f}
+	}
+	if len(pfs) == 0 {
+		pfs = append(pfs, pseudofile{name: "empty directory...", isDir: false, isReal: false})
+	}
+	return pfs, count, nil
 }
+
 func dirIsEmpty(name string) (bool, error) {
 	f, err := os.Open(name)
 	if err != nil {

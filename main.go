@@ -8,10 +8,10 @@ import (
 
 type goFMState struct {
 	cd     string
-	dir    []os.FileInfo
+	dir    []pseudofile
 	dt     directoryTree
 	cmd    string
-	active os.FileInfo
+	active pseudofile
 	mode   mode
 }
 
@@ -48,7 +48,7 @@ func main() {
 
 	for {
 
-		s.dir, err = readDir(".")
+		s.dir, _, err = readDir(".")
 		if err != nil {
 			panic(err)
 		}
