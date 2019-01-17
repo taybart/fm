@@ -17,6 +17,8 @@ const (
 	confirm
 )
 
+var navtree = []string{}
+
 var a = struct { // action
 	cmd       string
 	confirmed bool
@@ -72,20 +74,36 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		/* Movement */
 		case ch == 'h':
 			if s.cd != "/" {
-				os.Chdir("../")
+				if len(navtree) > 0 {
+					dn := navtree[len(navtree)-1]
+					navtree = navtree[:len(navtree)-1]
+					os.Chdir(dn)
+				} else {
+					os.Chdir("../")
+				}
 			}
 		case ch == 'l':
 			if len(s.dir) == 0 {
 				break
 			}
+
+			dn := ""
 			if s.active.isDir {
-				dn := s.cd + "/" + s.active.name
+				dn = s.cd + "/" + s.active.name
+			}
+			if s.active.isSymL {
+				if f, err := os.Stat(s.active.symName); f.IsDir() && err == nil {
+					dn = s.active.symName
+				}
+			}
+			if dn != "" {
 				if s.cd == "/" {
 					dn = s.cd + s.active.name
 				}
 				if _, ok := s.dt[dn]; !ok {
 					s.dt[dn] = &dir{active: 0}
 				}
+				navtree = append(navtree, s.cd)
 				os.Chdir(dn)
 			}
 		case key == termbox.KeyCtrlJ:

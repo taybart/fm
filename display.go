@@ -10,6 +10,7 @@ import (
 
 const (
 	topOffset = 1
+	fgDefault = termbox.Attribute(0xe0)
 )
 
 func debug(x, y int, format string, v ...interface{}) {
@@ -21,9 +22,17 @@ func debug(x, y int, format string, v ...interface{}) {
 
 func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 	_, tbheight := termbox.Size()
+	viewbox := tbheight - 2
 	oob := 0
-	if active+3 > tbheight {
-		oob = active + 3 - tbheight
+	// are we off the edge
+	if active+tbheight/2 > viewbox {
+		oob = (active + tbheight/2) - viewbox
+		if len(dir[oob:]) < viewbox {
+			oob -= tbheight - 2 - len(dir[oob:])
+		}
+		if oob < 0 {
+			oob = 0
+		}
 		dir = dir[oob:]
 	}
 	for i, f := range dir {
@@ -34,9 +43,9 @@ func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 		if f.isDir {
 			str += "/"
 		}
-
-		fg := termbox.ColorDefault
-		bg := termbox.ColorDefault
+		if f.isSymL {
+			str += " -> " + f.symName
+		}
 
 		if len(str) > width-4 {
 			str = str[:width-3] + ".."
@@ -45,30 +54,51 @@ func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 			str += " "
 		}
 
-		if f.isReal {
-			m := f.f.Mode()
-			if (m & 0111) != 0 {
-				fg = termbox.ColorYellow | termbox.AttrBold
-			}
-
-			if f.isDir {
-				fg = termbox.ColorCyan | termbox.AttrBold
-				if active == i+oob {
-					fg = termbox.ColorDefault | termbox.AttrBold
-				}
-			}
-		} else {
-			fg = termbox.ColorDefault
+		a := (active == i+oob)
+		// Append count to end if dir
+		if f.isDir && a {
+			c := strconv.Itoa(count)
+			str = str[:len(str)-(len(c)+1)] + c + " "
 		}
-		if active == i+oob {
-			bg = termbox.ColorBlue
-			if f.isDir {
+		if f.isSymL && a {
+			if f, err := os.Stat(f.symName); f.IsDir() && err == nil {
 				c := strconv.Itoa(count)
 				str = str[:len(str)-(len(c)+1)] + c + " "
 			}
 		}
+		fg, bg := getColors(f, a)
+
 		printString(offset, i+topOffset, width, str, fg, bg)
 	}
+}
+
+func getColors(f pseudofile, selected bool) (termbox.Attribute, termbox.Attribute) {
+	fg := fgDefault
+	bg := termbox.ColorDefault
+	if selected {
+		bg = termbox.ColorBlue
+	}
+
+	if f.isDir {
+		fg = termbox.ColorCyan
+		if selected {
+			fg = fgDefault
+		}
+		fg |= termbox.AttrBold
+	} else {
+
+		if !f.isReal {
+			fg = fgDefault
+		} else if (f.f.Mode()&0111) != 0 && !f.isSymL {
+			fg = termbox.ColorYellow | termbox.AttrBold
+		} else if f.isSymL && f.symName != "" {
+			fg = termbox.ColorMagenta | termbox.AttrBold
+			if f, err := os.Stat(f.symName); f.IsDir() && err == nil {
+				fg = termbox.ColorBlue | termbox.AttrBold
+			}
+		}
+	}
+	return fg, bg
 }
 
 func printStringNoWrap(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
@@ -120,7 +150,8 @@ func setupDisplay() {
 		panic(err)
 	}
 	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
-	termbox.SetOutputMode(termbox.OutputNormal)
+	// termbox.SetOutputMode(termbox.OutputNormal)
+	termbox.SetOutputMode(termbox.Output256)
 }
 
 func render() {
@@ -165,17 +196,30 @@ func draw(dt directoryTree, cd, userinput string) {
 				childPath = cd + files[dt[cd].active].name
 			}
 			files, c, err := readDir(childPath)
-			if err != nil {
-				panic(err) // @TODO: tmp
-			}
-			if files[0].isReal {
-				count = c
-			}
-			if _, ok := dt[childPath]; !ok {
-				dt[childPath] = &dir{active: 0}
-			}
-			drawDir(dt[childPath].active, 0, files, offset, width)
 
+			if !os.IsPermission(err) {
+				if files[0].isReal {
+					count = c
+				}
+				if _, ok := dt[childPath]; !ok {
+					dt[childPath] = &dir{active: 0}
+				}
+				drawDir(dt[childPath].active, 0, files, offset, width)
+			}
+		} else if files[dt[cd].active].isSymL && files[dt[cd].active].symName != "" {
+			if f, err := os.Stat(files[dt[cd].active].symName); f.IsDir() && err == nil {
+				childP := files[dt[cd].active].symName
+				files, c, err := readDir(childP)
+				if !os.IsPermission(err) && len(files) > 0 {
+					if files[0].isReal {
+						count = c
+					}
+					if _, ok := dt[childP]; !ok {
+						dt[childP] = &dir{active: 0}
+					}
+					drawDir(dt[childP].active, 0, files, offset, width)
+				}
+			}
 		} else if files[dt[cd].active].isReal &&
 			files[dt[cd].active].f.Size() < 100*1024*1024 {
 

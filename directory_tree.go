@@ -15,13 +15,17 @@ type dir struct {
 	active int
 	name   string
 }
-type pseudofile struct {
-	name   string
-	isDir  bool
-	isReal bool
-	f      os.FileInfo
-}
+
 type directoryTree map[string]*dir
+
+type pseudofile struct {
+	name    string
+	symName string
+	isDir   bool
+	isReal  bool
+	isSymL  bool
+	f       os.FileInfo
+}
 
 func getParentPath(cd string) string {
 	dirs := strings.Split(cd, "/")
@@ -84,7 +88,7 @@ func readDir(name string) ([]pseudofile, int, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		if os.IsPermission(err) {
-			return nil, 0, nil
+			return nil, 0, err
 		}
 		w := fmt.Sprintf("filename: %s", name)
 		return nil, 0, errors.Wrap(err, w)
@@ -101,7 +105,13 @@ func readDir(name string) ([]pseudofile, int, error) {
 	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
 	pfs := make([]pseudofile, len(files))
 	for i, f := range files {
-		pfs[i] = pseudofile{name: f.Name(), isDir: f.IsDir(), isReal: true, f: f}
+		isSymL := false
+		symName := ""
+		if f.Mode()&os.ModeSymlink != 0 {
+			isSymL = true
+			symName, err = os.Readlink(f.Name())
+		}
+		pfs[i] = pseudofile{name: f.Name(), symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}
 	}
 	if len(pfs) == 0 {
 		pfs = append(pfs, pseudofile{name: "empty directory...", isDir: false, isReal: false})
