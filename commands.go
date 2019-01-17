@@ -20,6 +20,7 @@ const (
 var a = struct { // action
 	cmd       string
 	confirmed bool
+	lagmode   mode
 }{confirmed: false}
 
 var deletedFiles = []string{}
@@ -57,7 +58,12 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 		if ev.Ch == 'Y' || ev.Ch == 'y' {
 			s.cmd = a.cmd
 			a.confirmed = true
-			s.RunFullCommand()
+			if a.lagmode == command {
+				s.RunFullCommand()
+			}
+			if a.lagmode == commandsingle {
+				s.RunLetterCommand()
+			}
 			a.confirmed = false
 		}
 		s.cmd = ""
@@ -122,6 +128,8 @@ func (s *goFMState) changeDirectory(file string) {
 }
 
 func (s *goFMState) RunLetterCommand() {
+
+	a.lagmode = commandsingle
 	switch s.cmd {
 	case "d":
 		deleteFile(s)
@@ -139,6 +147,8 @@ func (s *goFMState) RunLetterCommand() {
 
 }
 func (s *goFMState) RunFullCommand() {
+
+	a.lagmode = command
 	args := strings.Split(s.cmd, " ")
 	if s.cmd[1] == '!' {
 		cmd := strings.Split(args[0], "!")
@@ -243,7 +253,10 @@ func moveToTrash(fn string) {
 		if err != nil {
 			log.Errorln(err)
 		}
-		os.MkdirAll(home+"/.tmp/gofm_trash/", os.ModeDir|0755)
+		err = os.MkdirAll(home+"/.tmp/gofm_trash/", os.ModeDir|0755)
+		if err != nil {
+			log.Errorln(err)
+		}
 	}
 	os.Rename(fn, home+"/.tmp/gofm_trash/"+fn)
 	deletedFiles = append(deletedFiles, fn)
