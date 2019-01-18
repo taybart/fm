@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/nsf/termbox-go"
 	"github.com/taybart/log"
 	"os"
@@ -19,23 +20,15 @@ var conf config
 
 func main() {
 	var err error
-	home := os.Getenv("HOME")
-	log.UseColors = false
-	log.SetOutput(home + "/.config/gofm/gofm.log")
-	if os.Getenv("ENV") == "production" {
-		log.SetLevel(log.WARN)
-		conf, err = loadConfig(home + "/.config/gofm/config.json")
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		log.SetLevel(log.DEBUG)
-		conf, err = loadConfig(home + "/.config/gofm/config.json")
-		if err != nil {
-			log.Errorln(err)
-			os.Exit(1)
-		}
+	_, sessionActive := os.LookupEnv("FM_SESSION_ACTIVE")
+	if sessionActive {
+		fmt.Println("Nesting sessions is not a wise idea")
+		os.Exit(0)
 	}
+	os.Setenv("FM_SESSION_ACTIVE", "true")
+	defer os.Unsetenv("FM_SESSION_ACTIVE")
+
+	setupLog()
 
 	s := &fmState{cmd: "", mode: normal}
 
@@ -68,8 +61,25 @@ func main() {
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventResize:
 			draw(s.dt, s.cd, s.cmd)
-		case termbox.EventKey:
-			s.KeyParser(ev)
+		case termbox.EventKey, termbox.EventMouse:
+			s.ParseKeyEvent(ev)
 		}
 	}
+}
+
+func setupLog() {
+	var err error
+	home := os.Getenv("HOME")
+	log.UseColors = false
+	conf, err = loadConfig(home + "/.config/fm/config.json")
+	log.SetOutput(conf.Folder + "/fm.log")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	llevel := log.WARN
+	if os.Getenv("ENV") != "production" {
+		llevel = log.DEBUG
+	}
+	log.SetLevel(llevel)
 }

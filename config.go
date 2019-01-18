@@ -13,6 +13,7 @@ type config struct {
 	ColumnRatios []int  `json:"columnWidths"`
 	PreviewRegex string `json:"previewRegex"`
 	JumpAmount   int    `json:"jumpAmount"`
+	Folder       string `json:"folder"`
 }
 
 func loadConfig(name string) (config, error) {
@@ -23,6 +24,7 @@ func loadConfig(name string) (config, error) {
 
 	defer j.Close()
 
+	home := os.Getenv("HOME")
 	// Default Config
 	c := config{
 		ShowHidden:   false,
@@ -31,6 +33,7 @@ func loadConfig(name string) (config, error) {
 		ColumnRatios: []int{2, 5, 3},
 		JumpAmount:   5,
 		PreviewRegex: "",
+		Folder:       home + "/.config/fm",
 	}
 
 	jb, err := ioutil.ReadAll(j)

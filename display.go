@@ -1,5 +1,7 @@
 package main
 
+// Display files are complicated...sorry its so silly
+
 import (
 	"fmt"
 	"github.com/nsf/termbox-go"
@@ -13,18 +15,11 @@ const (
 	fgDefault = termbox.Attribute(0xe0)
 )
 
-func debug(x, y int, format string, v ...interface{}) {
-	fg := termbox.ColorDefault
-	bg := termbox.ColorDefault
-	s := fmt.Sprintf(format, v...)
-	printString(x, y, 10000, s, fg, bg)
-}
-
 func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 	_, tbheight := termbox.Size()
 	viewbox := tbheight - 2
 	oob := 0
-	// are we off the edge
+	// are we off the edge of the display
 	if active+tbheight/2 > viewbox {
 		oob = (active + tbheight/2) - viewbox
 		if len(dir[oob:]) < viewbox {
@@ -68,7 +63,7 @@ func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 		}
 		fg, bg := getColors(f, a)
 
-		printString(offset, i+topOffset, width, str, fg, bg)
+		printString(offset, i+topOffset, width, str, true, fg, bg)
 	}
 }
 
@@ -101,7 +96,7 @@ func getColors(f pseudofile, selected bool) (termbox.Attribute, termbox.Attribut
 	return fg, bg
 }
 
-func printStringNoWrap(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
+func printString(x, y, maxWidth int, s string, wrap bool, fg, bg termbox.Attribute) {
 	xstart := x
 	for _, c := range s {
 		if c == '\n' {
@@ -113,23 +108,9 @@ func printStringNoWrap(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
 			termbox.SetCell(x, y, c, fg, bg)
 			x++
 			if x > xstart+maxWidth {
-				break
-			}
-		}
-	}
-}
-func printString(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
-	xstart := x
-	for _, c := range s {
-		if c == '\n' {
-			x = xstart
-			y++
-		} else if c == '\r' {
-			x = xstart
-		} else {
-			termbox.SetCell(x, y, c, fg, bg)
-			x++
-			if x > xstart+maxWidth {
+				if !wrap {
+					break
+				}
 				x = xstart
 				y++
 			}
@@ -140,7 +121,7 @@ func printString(x, y, maxWidth int, s string, fg, bg termbox.Attribute) {
 func printPrompt(s string) {
 	tbwidth, tbheight := termbox.Size()
 	printString(tbwidth/4, tbheight/2, tbwidth,
-		s, termbox.ColorDefault, termbox.ColorDefault)
+		s, true, termbox.ColorDefault, termbox.ColorDefault)
 	render()
 }
 
@@ -159,35 +140,34 @@ func render() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 }
 
-func draw(dt directoryTree, cd, userinput string) {
+func drawParentDir(files []pseudofile, dt directoryTree, cd string, count int) {
+	tbwidth, _ := termbox.Size()
 	cr := conf.ColumnRatios
 	cw := conf.ColumnWidth
-
-	tbwidth, tbheight := termbox.Size()
 	if cw < 0 {
 		cw = tbwidth
 	}
-
-	files, amtFiles, err := readDir(".")
-	if err != nil {
-		panic(err) // @TODO: tmp
-	}
-
 	parentPath := getParentPath(cd)
-	parentFiles, _, err := readDir(parentPath)
+	parentFiles, _, _ := readDir(parentPath)
 	if _, ok := dt[parentPath]; !ok {
 		dt[parentPath] = dt.newDirForParent(cd)
 	}
-
 	// Draw parent dir in first column
-	offset := 0
 	width := int(float64(cr[0]) / 10.0 * float64(cw))
-	drawDir(dt[parentPath].active, amtFiles, parentFiles, offset, width)
+	drawDir(dt[parentPath].active, count, parentFiles, 0, width)
 
-	offset = int(float64(cr[0])/10.0*float64(cw)) +
+}
+
+func drawChildDir(files []pseudofile, dt directoryTree, cd string, count *int) {
+	tbwidth, tbheight := termbox.Size()
+	cr := conf.ColumnRatios
+	cw := conf.ColumnWidth
+	if cw < 0 {
+		cw = tbwidth
+	}
+	offset := int(float64(cr[0])/10.0*float64(cw)) +
 		int(float64(cr[1])/10.0*float64(cw))
-	width = int(float64(cr[2]) / 10.0 * float64(cw))
-	count := 0
+	width := int(float64(cr[2]) / 10.0 * float64(cw))
 	if len(files) > 0 {
 		// Draw child directory or preview file < 100KB in last column
 		if files[dt[cd].active].isDir {
@@ -199,7 +179,7 @@ func draw(dt directoryTree, cd, userinput string) {
 
 			if !os.IsPermission(err) {
 				if files[0].isReal {
-					count = c
+					*count = c
 				}
 				if _, ok := dt[childPath]; !ok {
 					dt[childPath] = &dir{active: 0}
@@ -212,7 +192,7 @@ func draw(dt directoryTree, cd, userinput string) {
 				files, c, err := readDir(childP)
 				if !os.IsPermission(err) && len(files) > 0 {
 					if files[0].isReal {
-						count = c
+						*count = c
 					}
 					if _, ok := dt[childP]; !ok {
 						dt[childP] = &dir{active: 0}
@@ -224,59 +204,49 @@ func draw(dt directoryTree, cd, userinput string) {
 			files[dt[cd].active].f.Size() < 100*1024*1024 {
 
 			n := files[dt[cd].active].name
-			// cmd := exec.Command("/Users/taylor/Downloads/vimpager/vimcat", "-o", "-", n)
 			cmd := exec.Command("cat", n)
 			buf, _ := cmd.Output()
 			if len(buf) > cw*tbheight {
 				buf = buf[:200]
 			}
-			if conf.WrapText {
-				printString(offset, topOffset, width,
-					string(buf), termbox.ColorDefault, termbox.ColorDefault)
-			} else {
-				printStringNoWrap(offset, topOffset, width,
-					string(buf), termbox.ColorDefault, termbox.ColorDefault)
-			}
+			printString(offset, topOffset, width,
+				string(buf), conf.WrapText, termbox.ColorDefault, termbox.ColorDefault)
 		}
 	}
+}
 
-	// Draw current dir in middle column
-	offset = int(float64(cr[0]) / 10.0 * float64(cw))
-	width = int(float64(cr[1]) / 10.0 * float64(cw))
-	drawDir(dt[cd].active, count, files, offset, width)
-
-	{
-		// Print user/cd at top
-		// cdFG := termbox.ColorBlue | termbox.AttrBold
-		un := os.Getenv("USER")
-		hn, err := os.Hostname()
-		if err != nil {
-			panic(err)
-		}
-		ustr := un + "@" + hn
-		printString(0, 0, tbwidth, ustr, termbox.ColorGreen, termbox.ColorDefault)
-		// printString(len(ustr)+1, 0, tbwidth, cd, cdFG, termbox.ColorDefault)
-		dn := cd
-		oset := 0
-		if cd != "/" {
-			dn += "/"
-			oset = 1
-		}
-
-		printString(len(ustr)+1, 0, tbwidth, dn, termbox.ColorBlue, termbox.ColorDefault)
-		f := files[dt[cd].active]
-		name := f.name
-		if f.isDir {
-			name += "/"
-		}
-		printString(len(ustr)+len(cd)+1+oset, 0, tbwidth, name,
-			termbox.ColorDefault, termbox.ColorDefault)
+func drawHeader(userinput string, files []pseudofile, dt directoryTree, cd string) {
+	tbwidth, _ := termbox.Size()
+	// Print user/cd at top
+	un := os.Getenv("USER")
+	hn, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+	ustr := un + "@" + hn
+	printString(0, 0, tbwidth, ustr, true, termbox.ColorGreen, termbox.ColorDefault)
+	dn := cd
+	oset := 0
+	if cd != "/" {
+		dn += "/"
+		oset = 1
 	}
 
-	// Print user input or dir info at bottom
+	printString(len(ustr)+1, 0, tbwidth, dn, true, termbox.ColorBlue, termbox.ColorDefault)
+	f := files[dt[cd].active]
+	name := f.name
+	if f.isDir {
+		name += "/"
+	}
+	printString(len(ustr)+len(cd)+1+oset, 0, tbwidth, name,
+		true, termbox.ColorDefault, termbox.ColorDefault)
+}
+
+func drawFooter(userinput string, files []pseudofile, dt directoryTree, cd string) {
+	tbwidth, tbheight := termbox.Size()
 	if len(userinput) > 0 {
 		printString(0, tbheight-1, tbwidth,
-			userinput, termbox.ColorDefault, termbox.ColorDefault)
+			userinput, true, termbox.ColorDefault, termbox.ColorDefault)
 	} else {
 		f := files[dt[cd].active]
 		if f.isReal {
@@ -284,9 +254,38 @@ func draw(dt directoryTree, cd, userinput string) {
 				f.f.Mode(), f.f.Size(),
 				f.f.ModTime().Format("Jan 2 15:04"), f.name)
 			printString(0, tbheight-1, tbwidth,
-				s, termbox.ColorDefault, termbox.ColorDefault)
+				s, true, termbox.ColorDefault, termbox.ColorDefault)
 		}
 	}
+}
 
+func draw(dt directoryTree, cd, userinput string) {
+
+	files, amtFiles, err := readDir(".")
+	if err != nil {
+		panic(err) // @TODO: tmp
+	}
+
+	// draw parent
+	drawParentDir(files, dt, cd, amtFiles)
+	childCount := 0
+	drawChildDir(files, dt, cd, &childCount)
+
+	{ // Draw current directory
+		tbw, _ := termbox.Size()
+		cr := conf.ColumnRatios
+		cw := conf.ColumnWidth
+		if cw < 0 {
+			cw = tbw
+		}
+		offset := int(float64(cr[0]) / 10.0 * float64(cw))
+		width := int(float64(cr[1]) / 10.0 * float64(cw))
+		drawDir(dt[cd].active, childCount, files, offset, width)
+	}
+
+	drawHeader(userinput, files, dt, cd)
+
+	// draw footer for frame
+	drawFooter(userinput, files, dt, cd)
 	render()
 }
