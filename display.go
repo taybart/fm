@@ -96,50 +96,6 @@ func getColors(f pseudofile, selected bool) (termbox.Attribute, termbox.Attribut
 	return fg, bg
 }
 
-func printString(x, y, maxWidth int, s string, wrap bool, fg, bg termbox.Attribute) {
-	xstart := x
-	for _, c := range s {
-		if c == '\n' {
-			x = xstart
-			y++
-		} else if c == '\r' {
-			x = xstart
-		} else {
-			termbox.SetCell(x, y, c, fg, bg)
-			x++
-			if x > xstart+maxWidth {
-				if !wrap {
-					break
-				}
-				x = xstart
-				y++
-			}
-		}
-	}
-}
-
-func printPrompt(s string) {
-	tbwidth, tbheight := termbox.Size()
-	printString(tbwidth/4, tbheight/2, tbwidth,
-		s, true, termbox.ColorDefault, termbox.ColorDefault)
-	render()
-}
-
-func setupDisplay() {
-	err := termbox.Init()
-	if err != nil {
-		panic(err)
-	}
-	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
-	// termbox.SetOutputMode(termbox.OutputNormal)
-	termbox.SetOutputMode(termbox.Output256)
-}
-
-func render() {
-	termbox.Flush()
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-}
-
 func drawParentDir(files []pseudofile, dt directoryTree, cd string, count int) {
 	tbwidth, _ := termbox.Size()
 	cr := conf.ColumnRatios
@@ -287,5 +243,49 @@ func draw(dt directoryTree, cd, userinput string) {
 
 	// draw footer for frame
 	drawFooter(userinput, files, dt, cd)
+	render()
+}
+
+func setupDisplay() {
+	err := termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
+	// termbox.SetOutputMode(termbox.OutputNormal)
+	termbox.SetOutputMode(termbox.Output256)
+}
+
+func render() {
+	termbox.Flush()
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+}
+
+func printString(x, y, maxWidth int, s string, wrap bool, fg, bg termbox.Attribute) {
+	xstart := x
+	for _, c := range s {
+		if c == '\n' {
+			x = xstart
+			y++
+		} else if c == '\r' {
+			x = xstart
+		} else {
+			termbox.SetCell(x, y, c, fg, bg)
+			x++
+			if x > xstart+maxWidth {
+				if !wrap {
+					break
+				}
+				x = xstart
+				y++
+			}
+		}
+	}
+}
+
+func printPrompt(s string) {
+	tbwidth, tbheight := termbox.Size()
+	printString(tbwidth/4, tbheight/2, tbwidth,
+		s, true, termbox.ColorDefault, termbox.ColorDefault)
 	render()
 }

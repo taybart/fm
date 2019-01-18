@@ -34,7 +34,7 @@ func (s *fmState) ParseKeyEvent(ev termbox.Event) {
 		s.mode = normal
 		s.RunLetterCommand()
 	case command:
-		s.parseCommmandMode(ev)
+		go s.parseCommmandMode(ev)
 	case confirm:
 		s.parseConfirmMode(ev)
 	case normal:
@@ -43,11 +43,9 @@ func (s *fmState) ParseKeyEvent(ev termbox.Event) {
 }
 
 func (s *fmState) parseNormalMode(ev termbox.Event) {
-	ch := ev.Ch
-	key := ev.Key
-	switch {
+	switch ev.Ch {
 	/* Movement */
-	case ch == 'h':
+	case 'h':
 		if s.cd != "/" {
 			if len(navtree) > 0 {
 				dn := navtree[len(navtree)-1]
@@ -57,7 +55,7 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 				os.Chdir("../")
 			}
 		}
-	case ch == 'l':
+	case 'l':
 		if len(s.dir) == 0 {
 			break
 		}
@@ -82,38 +80,48 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 			navtree = append(navtree, s.cd)
 			os.Chdir(dn)
 		}
-	case key == termbox.KeyCtrlJ:
-		if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
-			s.dt[s.cd].active += conf.JumpAmount
-		}
-	case ch == 'j', key == termbox.MouseWheelDown:
+	case 'j':
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active++
 		}
-	case key == termbox.KeyCtrlK:
-		if len(s.dir) > 0 {
-			s.dt[s.cd].active -= conf.JumpAmount
-		}
-	case ch == 'k', key == termbox.MouseWheelUp:
+	case 'k':
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active--
 		}
 	/* Special */
-	case key == termbox.MouseLeft:
-		s.dt[s.cd].active = ev.MouseY - 1
-	case ch == 'i':
+	case 'i':
 		inspectFile(s.active)
-	case ch == 'e', ch == 'z':
+	case 'e', 'z':
 		s.mode = single
-	case ch == ':':
+	case ':':
 		s.cmd = ":"
 		s.mode = command
-	case ch == 'S':
+	case 'S':
 		newShell()
-	case ch == '/':
+	case '/':
 		fuzzyFind(s)
-	case ch == 'q':
+	case 'q':
 		finalize()
+	}
+	switch ev.Key {
+	case termbox.KeyCtrlJ:
+		if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
+			s.dt[s.cd].active += conf.JumpAmount
+		}
+	case termbox.KeyCtrlK:
+		if len(s.dir) > 0 {
+			s.dt[s.cd].active -= conf.JumpAmount
+		}
+	case termbox.MouseWheelUp:
+		if len(s.dir) > 0 {
+			s.dt[s.cd].active--
+		}
+	case termbox.MouseWheelDown:
+		if len(s.dir) > 0 {
+			s.dt[s.cd].active++
+		}
+	case termbox.MouseLeft:
+		s.dt[s.cd].active = ev.MouseY - 1
 	}
 }
 

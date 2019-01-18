@@ -37,6 +37,17 @@ func fuzzyFind(s *fmState) {
 	for i, f := range s.dir {
 		if filtered[0] == f.name {
 			s.dt[s.cd].active = i
+			if s.dir[i].isDir {
+				dn := s.cd + "/" + s.dir[i].name
+				if s.cd == "/" {
+					dn = s.cd + s.dir[i].name
+				}
+				if _, ok := s.dt[dn]; !ok {
+					s.dt[dn] = &dir{active: 0}
+				}
+				navtree = append(navtree, s.cd)
+				os.Chdir(dn)
+			}
 		}
 	}
 }
