@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-type goFMState struct {
+type fmState struct {
 	cd     string
 	dir    []pseudofile
 	dt     directoryTree
@@ -37,7 +37,7 @@ func main() {
 		}
 	}
 
-	s := &goFMState{cmd: "", mode: normal}
+	s := &fmState{cmd: "", mode: normal}
 
 	setupDisplay()
 	defer termbox.Close()

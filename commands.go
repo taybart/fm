@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"github.com/nsf/termbox-go"
 	"github.com/taybart/log"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -27,7 +29,7 @@ var a = struct { // action
 
 var deletedFiles = []string{}
 
-func (s *goFMState) KeyParser(ev termbox.Event) {
+func (s *fmState) KeyParser(ev termbox.Event) {
 	ch := ev.Ch
 	key := ev.Key
 
@@ -124,13 +126,15 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 				s.dt[s.cd].active--
 			}
 		/* Special */
-		case ch == 'e':
+		case ch == 'e', ch == 'z':
 			s.mode = single
 		case ch == ':':
 			s.cmd = ":"
 			s.mode = command
 		case ch == 'S':
 			newShell()
+		case ch == '/':
+			fuzzyFind(s)
 		case ch == 'q':
 			finalize()
 		default:
@@ -139,7 +143,39 @@ func (s *goFMState) KeyParser(ev termbox.Event) {
 	}
 }
 
-func (s *goFMState) changeDirectory(file string) {
+func fzf(input func(in io.WriteCloser)) []string {
+	termbox.Close()
+	shell := os.Getenv("SHELL")
+	if len(shell) == 0 {
+		shell = "sh"
+	}
+	cmd := exec.Command(shell, "-c", "fzf", "-m")
+	cmd.Stderr = os.Stderr
+	in, _ := cmd.StdinPipe()
+	go func() {
+		input(in)
+		in.Close()
+	}()
+	result, _ := cmd.Output()
+	setupDisplay()
+	return strings.Split(string(result), "\n")
+}
+
+func fuzzyFind(s *fmState) {
+	filtered := fzf(func(in io.WriteCloser) {
+		for _, f := range s.dir {
+			fmt.Fprintln(in, f.name)
+		}
+	})
+
+	for i, f := range s.dir {
+		if filtered[0] == f.name {
+			s.dt[s.cd].active = i
+		}
+	}
+}
+
+func (s *fmState) changeDirectory(file string) {
 	dn := s.cd + "/" + s.active.name
 	if _, ok := s.dt[dn]; !ok {
 		s.dt[dn] = &dir{active: 0}
@@ -147,7 +183,7 @@ func (s *goFMState) changeDirectory(file string) {
 	os.Chdir(dn)
 }
 
-func (s *goFMState) RunLetterCommand() {
+func (s *fmState) RunLetterCommand() {
 	a.lagmode = single
 	switch s.cmd {
 	case "d":
@@ -167,7 +203,7 @@ func (s *goFMState) RunLetterCommand() {
 	}
 
 }
-func (s *goFMState) RunFullCommand() {
+func (s *fmState) RunFullCommand() {
 
 	a.lagmode = command
 	args := strings.Split(s.cmd, " ")
@@ -203,7 +239,7 @@ func (s *goFMState) RunFullCommand() {
 	}
 }
 
-func (s *goFMState) getConfirmation(action string) {
+func (s *fmState) getConfirmation(action string) {
 	s.cmd = "Confirm " + action + " [Yy]: "
 	s.mode = confirm
 }
@@ -251,7 +287,7 @@ func renameFile(file pseudofile, newName string) {
 func copyFile() {
 }
 
-func deleteFileFull(s *goFMState) {
+func deleteFileFull(s *fmState) {
 	if a.confirmed {
 		os.Remove(s.active.name)
 	} else {
@@ -259,7 +295,7 @@ func deleteFileFull(s *goFMState) {
 		s.getConfirmation("deletion")
 	}
 }
-func deleteFile(s *goFMState) {
+func deleteFile(s *fmState) {
 	if a.confirmed {
 		moveToTrash(s.active.name)
 	} else {

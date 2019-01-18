@@ -60,7 +60,7 @@ func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 			c := strconv.Itoa(count)
 			str = str[:len(str)-(len(c)+1)] + c + " "
 		}
-		if f.isSymL && a {
+		if f.isSymL && a && f.symName != "" {
 			if f, err := os.Stat(f.symName); f.IsDir() && err == nil {
 				c := strconv.Itoa(count)
 				str = str[:len(str)-(len(c)+1)] + c + " "
