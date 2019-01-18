@@ -109,7 +109,10 @@ func readDir(name string) ([]pseudofile, int, error) {
 		symName := ""
 		if f.Mode()&os.ModeSymlink != 0 {
 			isSymL = true
-			symName, err = os.Readlink(f.Name())
+			symName, err = os.Readlink(name + "/" + f.Name())
+			if err != nil {
+				panic(err)
+			}
 		}
 		pfs[i] = pseudofile{name: f.Name(), symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}
 	}
