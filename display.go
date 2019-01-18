@@ -162,7 +162,7 @@ func drawChildDir(parent pseudofile, dt *directoryTree, cd string, count *int) {
 		cmd := exec.Command("cat", n)
 		buf, _ := cmd.Output()
 		if len(buf) > cw*tbheight {
-			buf = buf[:200]
+			buf = buf[:cw*tbheight]
 		}
 		printString(offset, topOffset, width,
 			string(buf), conf.WrapText, termbox.ColorDefault, termbox.ColorDefault)
