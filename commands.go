@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/nsf/termbox-go"
+	"github.com/taybart/log"
 	"io"
 	"os"
 	"os/exec"
@@ -124,7 +125,7 @@ func runThis(toRun string, args ...string) error {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		panic(err)
+		log.Errorln(err)
 	}
 	setupDisplay()
 	return nil

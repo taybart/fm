@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"github.com/nsf/termbox-go"
+	"github.com/taybart/log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -161,8 +162,8 @@ func drawChildDir(parent pseudofile, dt *directoryTree, cd string, count *int) {
 		n := parent.name
 		cmd := exec.Command("cat", n)
 		buf, _ := cmd.Output()
-		if len(buf) > cw*tbheight {
-			buf = buf[:cw*tbheight]
+		if len(buf) > cw*tbheight-2 {
+			buf = buf[:cw*tbheight-2]
 		}
 		printString(offset, topOffset, width,
 			string(buf), conf.WrapText, termbox.ColorDefault, termbox.ColorDefault)
@@ -175,7 +176,7 @@ func drawHeader(userinput string, files []pseudofile, dt directoryTree, cd strin
 	un := os.Getenv("USER")
 	hn, err := os.Hostname()
 	if err != nil {
-		panic(err)
+		log.Errorln(err)
 	}
 	ustr := un + "@" + hn
 	printString(0, 0, tbwidth, ustr, true, termbox.ColorGreen, termbox.ColorDefault)
@@ -217,7 +218,7 @@ func draw(dt directoryTree, cd, userinput string) {
 
 	files, amtFiles, err := readDir(".")
 	if err != nil {
-		panic(err) // @TODO: tmp
+		log.Errorln(err)
 	}
 
 	// draw parent

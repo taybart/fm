@@ -10,7 +10,7 @@ type config struct {
 	ShowHidden   bool   `json:"showHidden"`
 	WrapText     bool   `json:"wrapText"`
 	ColumnWidth  int    `json:"columnWidth"`
-	ColumnRatios []int  `json:"columnWidths"`
+	ColumnRatios []int  `json:"columnRatios"`
 	PreviewRegex string `json:"previewRegex"`
 	JumpAmount   int    `json:"jumpAmount"`
 	Folder       string `json:"folder"`
@@ -30,7 +30,7 @@ func loadConfig(name string) (config, error) {
 		ShowHidden:   false,
 		WrapText:     true,
 		ColumnWidth:  -1,
-		ColumnRatios: []int{2, 5, 3},
+		ColumnRatios: []int{2, 3, 5},
 		JumpAmount:   5,
 		PreviewRegex: "",
 		Folder:       home + "/.config/fm",

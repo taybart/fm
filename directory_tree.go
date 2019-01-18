@@ -52,12 +52,12 @@ func (dt directoryTree) newDirForParent(cd string) *dir {
 	pp := getParentPath(cd)
 	p, err := getParentName(cd)
 	if err != nil {
+		log.Errorln(err)
 		return &dir{active: 0}
-		// panic(err) // @TODO: tmp
 	}
 	fs, _, err := readDir(pp)
 	if err != nil {
-		panic(err) // @TODO: tmp
+		log.Errorln(err)
 	}
 
 	a := 0
@@ -111,7 +111,7 @@ func readDir(name string) ([]pseudofile, int, error) {
 			isSymL = true
 			symName, err = os.Readlink(name + "/" + f.Name())
 			if err != nil {
-				panic(err)
+				log.Errorln(err)
 			}
 		}
 		pfs[i] = pseudofile{name: f.Name(), symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}

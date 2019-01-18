@@ -14,7 +14,7 @@ func (s *fmState) getConfirmation(action string) {
 func newShell() {
 	shell, exists := os.LookupEnv("SHELL")
 	if !exists {
-		panic("No $SHELL defined")
+		shell = "sh"
 	}
 	runThis(shell)
 }
@@ -22,10 +22,10 @@ func newShell() {
 func inspectFile(file pseudofile) {
 	editor, exists := os.LookupEnv("EDITOR")
 	if !exists {
-		panic("No $EDITOR defined")
+		editor = "vi"
 	}
 	if editor == "vim" || editor == "nvim" {
-		runThis(editor, "-u", conf.Folder+"/vimrc.preview", file.name)
+		runThis(editor, "-u", conf.Folder+"/vimrc.preview", "-M", file.name)
 	} else {
 		runThis(editor, file.name)
 	}
@@ -35,14 +35,14 @@ func inspectFile(file pseudofile) {
 func editFile(file pseudofile) {
 	editor, exists := os.LookupEnv("EDITOR")
 	if !exists {
-		panic("No $EDITOR defined")
+		editor = "vi"
 	}
 	runThis(editor, file.name)
 }
 func renameFile(file pseudofile, newName string) {
 	err := os.Rename(file.name, newName)
 	if err != nil {
-		panic(err)
+		log.Errorln(err)
 	}
 }
 
