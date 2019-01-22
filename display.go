@@ -201,7 +201,7 @@ func drawFooter(userinput string, files []pseudofile, dt directoryTree, cd strin
 	tbwidth, tbheight := termbox.Size()
 	if len(userinput) > 0 {
 		printString(0, tbheight-1, tbwidth,
-			userinput, true, termbox.ColorDefault, termbox.ColorDefault)
+			userinput+"█", true, termbox.ColorDefault, termbox.ColorDefault)
 	} else {
 		f := files[dt[cd].active]
 		if f.isReal {

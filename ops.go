@@ -70,25 +70,34 @@ func pasteFile(s *fmState) error {
 	}
 	destName := s.cd + "/" + s.copySource.name
 	if _, err := os.Stat(destName); err == nil {
-		destName += "_copy"
+		ext := strings.Split(s.copySource.name, ".")
+		if len(ext) > 1 {
+			destName = s.cd + "/" + ext[0] + "_copy." + ext[1]
+		} else {
+			destName += "_copy"
+		}
 	}
-	buf := make([]byte, s.copySource.f.Size())
-	source, err := os.Open(s.copySource.fullPath)
-	destination, err := os.Create(destName)
-	if err != nil {
-		return err
-	}
-	for {
-		n, err := source.Read(buf)
-		if err != nil && err != io.EOF {
+	if s.copySource.isDir {
+		runThis("cp", "-a", s.copySource.fullPath, destName)
+	} else {
+		buf := make([]byte, s.copySource.f.Size())
+		source, err := os.Open(s.copySource.fullPath)
+		destination, err := os.Create(destName)
+		if err != nil {
 			return err
 		}
-		if n == 0 {
-			break
-		}
+		for {
+			n, err := source.Read(buf)
+			if err != nil && err != io.EOF {
+				return err
+			}
+			if n == 0 {
+				break
+			}
 
-		if _, err := destination.Write(buf[:n]); err != nil {
-			return err
+			if _, err := destination.Write(buf[:n]); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

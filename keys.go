@@ -90,10 +90,12 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active--
 		}
-	/* Special */
-	/* case 'c':
-	s.mode = command
-	s.cmd = ":cd " */
+		/* Special */
+	case 'd':
+		if s.lastInput == 'c' {
+			s.mode = command
+			s.cmd = ":cd "
+		}
 	case 'y':
 		// yy
 		if s.lastInput == 'y' {
