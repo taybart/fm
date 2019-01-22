@@ -8,12 +8,14 @@ import (
 )
 
 type fmState struct {
-	cd     string
-	dir    []pseudofile
-	dt     directoryTree
-	cmd    string
-	active pseudofile
-	mode   mode
+	cd           string
+	dir          []pseudofile
+	dt           directoryTree
+	cmd          string
+	active       pseudofile
+	mode         mode
+	copySource   pseudofile
+	copyBufReady bool
 }
 
 var conf config

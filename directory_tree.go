@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/taybart/log"
 	"io"
+	"path/filepath"
 	"sort"
 	// "io/ioutil"
 	"os"
@@ -19,12 +20,13 @@ type dir struct {
 type directoryTree map[string]*dir
 
 type pseudofile struct {
-	name    string
-	symName string
-	isDir   bool
-	isReal  bool
-	isSymL  bool
-	f       os.FileInfo
+	name     string
+	fullPath string
+	symName  string
+	isDir    bool
+	isReal   bool
+	isSymL   bool
+	f        os.FileInfo
 }
 
 func getParentPath(cd string) string {
@@ -114,7 +116,11 @@ func readDir(name string) ([]pseudofile, int, error) {
 				log.Errorln(err)
 			}
 		}
-		pfs[i] = pseudofile{name: f.Name(), symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}
+		fullPath, err := filepath.Abs(f.Name())
+		if err != nil {
+			log.Errorln(err)
+		}
+		pfs[i] = pseudofile{name: f.Name(), fullPath: fullPath, symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}
 	}
 	if len(pfs) == 0 {
 		pfs = append(pfs, pseudofile{name: "empty directory...", isDir: false, isReal: false})

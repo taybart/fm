@@ -1,9 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/nsf/termbox-go"
+	"github.com/pkg/errors"
 	"github.com/taybart/log"
+	"io"
 	"os"
+	"os/exec"
+	"strings"
 )
 
 func (s *fmState) getConfirmation(action string) {
@@ -17,6 +22,14 @@ func newShell() {
 		shell = "sh"
 	}
 	runThis(shell)
+}
+
+func (s *fmState) changeDirectory(file string) {
+	dn := s.cd + "/" + file
+	if _, ok := s.dt[dn]; !ok {
+		s.dt[dn] = &dir{active: 0}
+	}
+	os.Chdir(dn)
 }
 
 func inspectFile(file pseudofile) {
@@ -46,10 +59,39 @@ func renameFile(file pseudofile, newName string) {
 	}
 }
 
-func copyFile(file pseudofile) {
+func copyFile(s *fmState) {
+	s.copySource = s.active
+	s.copyBufReady = true
 }
 
-func pasteFile(file pseudofile) {
+func pasteFile(s *fmState) error {
+	if !s.copyBufReady {
+		return errors.New("No file in copy buffer")
+	}
+	destName := s.cd + "/" + s.copySource.name
+	if _, err := os.Stat(destName); err == nil {
+		destName += "_copy"
+	}
+	buf := make([]byte, s.copySource.f.Size())
+	source, err := os.Open(s.copySource.fullPath)
+	destination, err := os.Create(destName)
+	if err != nil {
+		return err
+	}
+	for {
+		n, err := source.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := destination.Write(buf[:n]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func deleteFileWithoutTrash(s *fmState) {
@@ -79,6 +121,49 @@ func undeleteFile() {
 	}
 }
 
+func fzf(input func(in io.WriteCloser)) []string {
+	termbox.Close()
+	shell := os.Getenv("SHELL")
+	if len(shell) == 0 {
+		shell = "sh"
+	}
+	cmd := exec.Command(shell, "-c", "fzf", "-m")
+	cmd.Stderr = os.Stderr
+	in, _ := cmd.StdinPipe()
+	go func() {
+		input(in)
+		in.Close()
+	}()
+	result, _ := cmd.Output()
+	setupDisplay()
+	return strings.Split(string(result), "\n")
+}
+
+func fuzzyFind(s *fmState) {
+	filtered := fzf(func(in io.WriteCloser) {
+		for _, f := range s.dir {
+			fmt.Fprintln(in, f.name)
+		}
+	})
+
+	for i, f := range s.dir {
+		if filtered[0] == f.name {
+			s.dt[s.cd].active = i
+			if s.dir[i].isDir {
+				dn := s.cd + "/" + s.dir[i].name
+				if s.cd == "/" {
+					dn = s.cd + s.dir[i].name
+				}
+				if _, ok := s.dt[dn]; !ok {
+					s.dt[dn] = &dir{active: 0}
+				}
+				navtree = append(navtree, s.cd)
+				os.Chdir(dn)
+			}
+		}
+	}
+}
+
 func moveToTrash(fn string) {
 	home, _ := os.LookupEnv("HOME")
 	if exists, err := fileExists(home + "/.tmp/gofm_trash/"); !exists {
@@ -104,4 +189,18 @@ func finalize() {
 	termbox.Close()
 	takeOutTrash()
 	os.Exit(0)
+}
+
+func runThis(toRun string, args ...string) error {
+	termbox.Close()
+	cmd := exec.Command(toRun, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Errorln(err)
+	}
+	setupDisplay()
+	return nil
 }

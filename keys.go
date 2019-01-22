@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/nsf/termbox-go"
 	"os"
+	"strings"
 )
 
 // Mode used to determine what to do
@@ -89,6 +90,9 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 			s.dt[s.cd].active--
 		}
 	/* Special */
+	/* case 'c':
+	s.mode = command
+	s.cmd = ":cd " */
 	case 'i':
 		inspectFile(s.active)
 	case 'e', 'z':
@@ -159,5 +163,69 @@ func (s *fmState) parseCommmandMode(ev termbox.Event) {
 		s.cmd += " "
 	default:
 		s.cmd += string(ev.Ch)
+	}
+}
+
+func (s *fmState) RunLetterCommand() {
+	a.lagmode = single
+	switch s.cmd {
+	case "d":
+		deleteFile(s)
+	case "D":
+		deleteFileWithoutTrash(s)
+	case "u":
+		undeleteFile()
+	case "e":
+		editFile(s.active)
+	case "h":
+		conf.ShowHidden = !conf.ShowHidden
+	case "y":
+		copyFile(s)
+	case "p":
+		pasteFile(s)
+	}
+	// check that we are done and clear
+	if s.mode == normal {
+		s.cmd = ""
+	}
+
+}
+func (s *fmState) RunFullCommand() {
+
+	a.lagmode = command
+	args := strings.Split(s.cmd, " ")
+	if s.cmd[1] == '!' {
+		cmd := strings.Split(args[0], "!")
+		runThis(cmd[1], args[1:]...)
+		render()
+	}
+	cmd := args[0][1:]
+	switch cmd {
+	case "cd":
+		s.changeDirectory(args[1])
+	case "d", "delete":
+		deleteFile(s)
+	case "D":
+		deleteFileWithoutTrash(s)
+	case "ud", "undelete":
+		undeleteFile()
+	case "rn", "rename":
+		renameFile(s.active, args[1])
+	case "e", "edit":
+		editFile(s.active)
+	case "th":
+		conf.ShowHidden = !conf.ShowHidden
+	case "sh", "shell":
+		newShell()
+	case "c", "copy":
+		copyFile(s)
+	case "p", "paste":
+		pasteFile(s)
+	case "q", "quit":
+		finalize()
+	}
+	// check that we are done and clear
+	if s.mode == normal {
+		s.cmd = ""
 	}
 }
