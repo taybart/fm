@@ -16,6 +16,7 @@ type fmState struct {
 	mode         mode
 	copySource   pseudofile
 	copyBufReady bool
+	lastInput    rune
 }
 
 var conf config

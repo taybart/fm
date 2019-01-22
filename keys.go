@@ -41,6 +41,7 @@ func (s *fmState) ParseKeyEvent(ev termbox.Event) {
 	case normal:
 		s.parseNormalMode(ev)
 	}
+	s.lastInput = ev.Ch
 }
 
 func (s *fmState) parseNormalMode(ev termbox.Event) {
@@ -93,6 +94,16 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 	/* case 'c':
 	s.mode = command
 	s.cmd = ":cd " */
+	case 'y':
+		// yy
+		if s.lastInput == 'y' {
+			copyFile(s)
+		}
+	case 'p':
+		// pp
+		if s.lastInput == 'p' {
+			pasteFile(s)
+		}
 	case 'i':
 		inspectFile(s.active)
 	case 'e', 'z':
@@ -217,7 +228,7 @@ func (s *fmState) RunFullCommand() {
 		conf.ShowHidden = !conf.ShowHidden
 	case "sh", "shell":
 		newShell()
-	case "c", "copy":
+	case "y", "copy":
 		copyFile(s)
 	case "p", "paste":
 		pasteFile(s)
