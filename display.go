@@ -16,7 +16,7 @@ const (
 	fgDefault = termbox.Attribute(0xe0)
 )
 
-func drawDir(active int, count int, dir []pseudofile, offset, width int) {
+func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, offset, width int) {
 	_, tbheight := termbox.Size()
 	viewbox := tbheight - 2
 	oob := 0
@@ -42,6 +42,9 @@ func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 		if f.isSymL {
 			str += " -> " + f.symName
 		}
+		if selected[f.name] {
+			str = " " + str
+		}
 
 		if len(str) > width-4 {
 			str = str[:width-3] + ".."
@@ -62,22 +65,22 @@ func drawDir(active int, count int, dir []pseudofile, offset, width int) {
 				str = str[:len(str)-(len(c)+1)] + c + " "
 			}
 		}
-		fg, bg := getColors(f, a)
+		fg, bg := getColors(f, a, selected[f.name])
 
 		printString(offset, i+topOffset, width, str, true, fg, bg)
 	}
 }
 
-func getColors(f pseudofile, selected bool) (termbox.Attribute, termbox.Attribute) {
+func getColors(f pseudofile, active, selected bool) (termbox.Attribute, termbox.Attribute) {
 	fg := fgDefault
 	bg := termbox.ColorDefault
-	if selected {
+	if active {
 		bg = termbox.ColorBlue
 	}
 
 	if f.isDir {
 		fg = termbox.ColorCyan
-		if selected {
+		if active {
 			fg = fgDefault
 		}
 		fg |= termbox.AttrBold
@@ -94,28 +97,31 @@ func getColors(f pseudofile, selected bool) (termbox.Attribute, termbox.Attribut
 			}
 		}
 	}
+	if selected {
+		fg = termbox.ColorYellow | termbox.AttrBold
+	}
 	return fg, bg
 }
 
-func drawParentDir(files []pseudofile, dt directoryTree, cd string, count int) {
+func drawParentDir(files []pseudofile, s *fmState, count int) {
 	tbwidth, _ := termbox.Size()
 	cr := conf.ColumnRatios
 	cw := conf.ColumnWidth
 	if cw < 0 {
 		cw = tbwidth
 	}
-	parentPath := getParentPath(cd)
+	parentPath := getParentPath(s.cd)
 	parentFiles, _, _ := readDir(parentPath)
-	if _, ok := dt[parentPath]; !ok {
-		dt[parentPath] = dt.newDirForParent(cd)
+	if _, ok := s.dt[parentPath]; !ok {
+		s.dt[parentPath] = s.dt.newDirForParent(s.cd)
 	}
 	// Draw parent dir in first column
 	width := int(float64(cr[0]) / 10.0 * float64(cw))
-	drawDir(dt[parentPath].active, count, parentFiles, 0, width)
+	drawDir(s.dt[parentPath].active, count, s.selectedFiles, parentFiles, 0, width)
 
 }
 
-func drawChildDir(parent pseudofile, dt *directoryTree, cd string, count *int) {
+func drawChildDir(parent pseudofile, s *fmState, count *int) {
 	tbwidth, tbheight := termbox.Size()
 	cr := conf.ColumnRatios
 	cw := conf.ColumnWidth
@@ -127,9 +133,9 @@ func drawChildDir(parent pseudofile, dt *directoryTree, cd string, count *int) {
 	width := int(float64(cr[2]) / 10.0 * float64(cw))
 	// Draw child directory or preview file < 100KB in last column
 	if parent.isDir {
-		childPath := cd + "/" + parent.name
-		if cd == "/" {
-			childPath = cd + parent.name
+		childPath := s.cd + "/" + parent.name
+		if s.cd == "/" {
+			childPath = s.cd + parent.name
 		}
 		files, c, err := readDir(childPath)
 
@@ -137,10 +143,10 @@ func drawChildDir(parent pseudofile, dt *directoryTree, cd string, count *int) {
 			if files[0].isReal {
 				*count = c
 			}
-			if _, ok := (*dt)[childPath]; !ok {
-				(*dt)[childPath] = &dir{active: 0}
+			if _, ok := s.dt[childPath]; !ok {
+				s.dt[childPath] = &dir{active: 0}
 			}
-			drawDir((*dt)[childPath].active, 0, files, offset, width)
+			drawDir(s.dt[childPath].active, 0, s.selectedFiles, files, offset, width)
 		}
 	} else if parent.isSymL && parent.symName != "" {
 		if f, err := os.Stat(parent.symName); f.IsDir() && err == nil {
@@ -150,10 +156,10 @@ func drawChildDir(parent pseudofile, dt *directoryTree, cd string, count *int) {
 				if files[0].isReal {
 					*count = c
 				}
-				if _, ok := (*dt)[childP]; !ok {
-					(*dt)[childP] = &dir{active: 0}
+				if _, ok := s.dt[childP]; !ok {
+					s.dt[childP] = &dir{active: 0}
 				}
-				drawDir((*dt)[childP].active, 0, files, offset, width)
+				drawDir(s.dt[childP].active, 0, s.selectedFiles, files, offset, width)
 			}
 		}
 	} else if parent.isReal &&
@@ -214,7 +220,7 @@ func drawFooter(userinput string, files []pseudofile, dt directoryTree, cd strin
 	}
 }
 
-func draw(dt directoryTree, cd, userinput string) {
+func draw(s *fmState) {
 
 	files, amtFiles, err := readDir(".")
 	if err != nil {
@@ -222,9 +228,9 @@ func draw(dt directoryTree, cd, userinput string) {
 	}
 
 	// draw parent
-	drawParentDir(files, dt, cd, amtFiles)
+	drawParentDir(files, s, amtFiles)
 	childCount := 0
-	drawChildDir(files[dt[cd].active], &dt, cd, &childCount)
+	drawChildDir(files[s.dt[s.cd].active], s, &childCount)
 
 	{ // Draw current directory
 		tbw, _ := termbox.Size()
@@ -235,13 +241,13 @@ func draw(dt directoryTree, cd, userinput string) {
 		}
 		offset := int(float64(cr[0]) / 10.0 * float64(cw))
 		width := int(float64(cr[1]) / 10.0 * float64(cw))
-		drawDir(dt[cd].active, childCount, files, offset, width)
+		drawDir(s.dt[s.cd].active, childCount, s.selectedFiles, files, offset, width)
 	}
 
-	drawHeader(userinput, files, dt, cd)
+	drawHeader(s.cmd, files, s.dt, s.cd)
 
 	// draw footer for frame
-	drawFooter(userinput, files, dt, cd)
+	drawFooter(s.cmd, files, s.dt, s.cd)
 	render()
 }
 

@@ -13,8 +13,9 @@ import (
 )
 
 type dir struct {
-	active int
-	name   string
+	active   int
+	name     string
+	selected []string
 }
 
 type directoryTree map[string]*dir

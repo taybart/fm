@@ -8,15 +8,16 @@ import (
 )
 
 type fmState struct {
-	cd           string
-	dir          []pseudofile
-	dt           directoryTree
-	cmd          string
-	active       pseudofile
-	mode         mode
-	copySource   pseudofile
-	copyBufReady bool
-	lastInput    rune
+	cd            string
+	dir           []pseudofile
+	dt            directoryTree
+	cmd           string
+	active        pseudofile
+	mode          mode
+	copySource    pseudofile
+	copyBufReady  bool
+	lastInput     rune
+	selectedFiles map[string]bool
 }
 
 var conf config
@@ -33,7 +34,8 @@ func main() {
 
 	setupLog()
 
-	s := &fmState{cmd: "", mode: normal}
+	sf := map[string]bool{}
+	s := &fmState{cmd: "", mode: normal, selectedFiles: sf}
 
 	setupDisplay()
 	defer termbox.Close()
@@ -59,11 +61,11 @@ func main() {
 		}
 		s.active = s.dir[s.dt[s.cd].active]
 
-		draw(s.dt, s.cd, s.cmd)
+		draw(s)
 
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventResize:
-			draw(s.dt, s.cd, s.cmd)
+			draw(s)
 		case termbox.EventKey, termbox.EventMouse:
 			s.ParseKeyEvent(ev)
 		}
