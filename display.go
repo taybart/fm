@@ -222,6 +222,10 @@ func drawFooter(userinput string, files []pseudofile, dt directoryTree, cd strin
 
 func draw(s *fmState) {
 
+	tbw, tbh := termbox.Size()
+	if tbw <= 0 || tbh <= 0 {
+		return
+	}
 	files, amtFiles, err := readDir(".")
 	if err != nil {
 		log.Errorln(err)

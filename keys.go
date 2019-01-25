@@ -113,6 +113,9 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 	case ':':
 		s.cmd = ":"
 		s.mode = command
+	case 's':
+		s.cmd = ":!"
+		s.mode = command
 	case 'S':
 		newShell()
 	case '/':
@@ -177,6 +180,9 @@ func (s *fmState) parseCommmandMode(ev termbox.Event) {
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
 		if len(s.cmd) > 1 {
 			s.cmd = s.cmd[:len(s.cmd)-1]
+		} else {
+			s.cmd = ""
+			s.mode = normal
 		}
 	case termbox.KeySpace:
 		s.cmd += " "
@@ -216,32 +222,33 @@ func (s *fmState) RunFullCommand() {
 	if s.cmd[1] == '!' {
 		cmd := strings.Split(args[0], "!")
 		runThis(cmd[1], args[1:]...)
-		render()
-	}
-	cmd := args[0][1:]
-	switch cmd {
-	case "cd":
-		s.changeDirectory(args[1])
-	case "d", "delete":
-		deleteFile(s)
-	case "D":
-		deleteFileWithoutTrash(s)
-	case "ud", "undelete":
-		undeleteFile()
-	case "rn", "rename":
-		renameFile(s.active, args[1])
-	case "e", "edit":
-		editFile(s.active)
-	case "th":
-		conf.ShowHidden = !conf.ShowHidden
-	case "sh", "shell":
-		newShell()
-	case "y", "copy":
-		copyFile(s)
-	case "p", "paste":
-		pasteFile(s)
-	case "q", "quit":
-		finalize()
+		draw(s)
+	} else {
+		cmd := args[0][1:]
+		switch cmd {
+		case "cd":
+			s.changeDirectory(args[1])
+		case "d", "delete":
+			deleteFile(s)
+		case "D":
+			deleteFileWithoutTrash(s)
+		case "ud", "undelete":
+			undeleteFile()
+		case "rn", "rename":
+			renameFile(s.active, args[1])
+		case "e", "edit":
+			editFile(s.active)
+		case "th":
+			conf.ShowHidden = !conf.ShowHidden
+		case "sh", "shell":
+			newShell()
+		case "y", "copy":
+			copyFile(s)
+		case "p", "paste":
+			pasteFile(s)
+		case "q", "quit":
+			finalize()
+		}
 	}
 	// check that we are done and clear
 	if s.mode == normal {
