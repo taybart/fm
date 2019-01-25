@@ -17,3 +17,19 @@ A tui file manager written in go. Ranger is written in icky python and it is far
 | !cmd args   | s       |                     | Run command with $SHELL                                                                                |
 |             | /       | Search              | Open fzf and search through current directory                                                          |
 
+## Config
+
+Inital config looks like:
+
+```json
+{
+  "showHidden": false,
+  "wrapText": true,
+  "columnWidth": -1,
+  "columnRatios": [2,3,5],
+  "jumpAmount": 5,
+  "previewRegex": "*",
+  "folder": "~/.config/fm"
+}
+
+```
