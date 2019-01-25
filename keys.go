@@ -92,9 +92,13 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 		}
 		/* Special */
 	case 'd':
-		if s.lastInput == 'c' {
+		switch s.lastInput {
+		case 'c':
 			s.mode = command
 			s.cmd = ":cd "
+		case 'd':
+			copyFile(s)
+			s.moveFile = true
 		}
 	case 'y':
 		// yy
@@ -104,7 +108,12 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 	case 'p':
 		// pp
 		if s.lastInput == 'p' {
-			pasteFile(s)
+			if s.moveFile {
+				moveFile(s)
+				s.moveFile = false
+			} else {
+				pasteFile(s)
+			}
 		}
 	case 'i':
 		inspectFile(s.active)

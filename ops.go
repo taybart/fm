@@ -60,28 +60,57 @@ func renameFile(file pseudofile, newName string) {
 }
 
 func copyFile(s *fmState) {
-	s.copySource = s.active
+	if len(s.selectedFiles) == 0 {
+		s.copySource = s.active
+	}
 	s.copyBufReady = true
 }
 
+func moveFile(s *fmState) error {
+	if !s.copyBufReady {
+		return errors.New("No file in copy buffer")
+	}
+	if len(s.selectedFiles) == 0 {
+		err := pasteSingleFile(s, s.copySource)
+		if err != nil {
+			return err
+		}
+		os.Remove(s.copySource.fullPath)
+	}
+	s.selectedFiles = map[string]bool{} // clear selected files
+	return nil
+}
 func pasteFile(s *fmState) error {
 	if !s.copyBufReady {
 		return errors.New("No file in copy buffer")
 	}
-	destName := s.cd + "/" + s.copySource.name
+	if len(s.selectedFiles) == 0 {
+		return pasteSingleFile(s, s.copySource)
+	}
+	// for fn := range s.selectedFiles {
+	// f := pseudofile{name: f.Name(), fullPath: fullPath, symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}
+	// pasteSingleFile(s, f)
+	// }
+
+	s.selectedFiles = map[string]bool{} // clear selected files
+	return nil
+}
+
+func pasteSingleFile(s *fmState, file pseudofile) error {
+	destName := s.cd + "/" + file.name
 	if _, err := os.Stat(destName); err == nil {
-		ext := strings.Split(s.copySource.name, ".")
+		ext := strings.Split(file.name, ".")
 		if len(ext) > 1 {
 			destName = s.cd + "/" + ext[0] + "_copy." + ext[1]
 		} else {
 			destName += "_copy"
 		}
 	}
-	if s.copySource.isDir {
-		runThis("cp", "-a", s.copySource.fullPath, destName)
+	if file.isDir {
+		runThis("cp", "-a", file.fullPath, destName)
 	} else {
-		buf := make([]byte, s.copySource.f.Size())
-		source, err := os.Open(s.copySource.fullPath)
+		buf := make([]byte, file.f.Size())
+		source, err := os.Open(file.fullPath)
 		destination, err := os.Create(destName)
 		if err != nil {
 			return err
@@ -102,7 +131,6 @@ func pasteFile(s *fmState) error {
 	}
 	return nil
 }
-
 func deleteFileWithoutTrash(s *fmState) {
 	if a.confirmed {
 		os.Remove(s.active.name)
@@ -209,6 +237,7 @@ func runThis(toRun string, args ...string) error {
 	err := cmd.Run()
 	if err != nil {
 		log.Errorln(err)
+		panic(err)
 	}
 	setupDisplay()
 	return nil

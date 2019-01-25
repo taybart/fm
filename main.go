@@ -16,6 +16,7 @@ type fmState struct {
 	mode          mode
 	copySource    pseudofile
 	copyBufReady  bool
+	moveFile      bool
 	lastInput     rune
 	selectedFiles map[string]bool
 }
