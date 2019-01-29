@@ -39,8 +39,12 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 		if f.isDir {
 			str += "/"
 		}
-		if f.isSymL {
-			str += " -> " + f.symName
+		if f.isLink {
+			if f.link.broken {
+				str += " ~> " + f.link.location
+			} else {
+				str += " -> " + f.link.location
+			}
 		}
 		if selected[f.name] {
 			str = " " + str
@@ -59,8 +63,8 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 			c := strconv.Itoa(count)
 			str = str[:len(str)-(len(c)+1)] + c + " "
 		}
-		if f.isSymL && a && f.symName != "" {
-			if cf, err := os.Stat(f.symName); err == nil && cf.IsDir() {
+		if f.isLink && a && f.link.location != "" {
+			if cf, err := os.Stat(f.link.location); err == nil && cf.IsDir() {
 				c := strconv.Itoa(count)
 				str = str[:len(str)-(len(c)+1)] + c + " "
 			}
@@ -88,12 +92,15 @@ func getColors(f pseudofile, active, selected bool) (termbox.Attribute, termbox.
 
 		if !f.isReal {
 			fg = fgDefault
-		} else if (f.f.Mode()&0111) != 0 && !f.isSymL {
+		} else if (f.f.Mode()&0111) != 0 && !f.isLink {
 			fg = termbox.ColorYellow | termbox.AttrBold
-		} else if f.isSymL && f.symName != "" {
+		} else if f.isLink && f.link.location != "" {
 			fg = termbox.ColorMagenta | termbox.AttrBold
-			if cf, err := os.Stat(f.symName); err == nil && cf.IsDir() {
+			if cf, err := os.Stat(f.link.location); err == nil && cf.IsDir() {
 				fg = termbox.ColorBlue | termbox.AttrBold
+			}
+			if f.link.broken {
+				fg = termbox.ColorRed | termbox.AttrBold
 			}
 		}
 	}
@@ -148,9 +155,9 @@ func drawChildDir(parent pseudofile, s *fmState, count *int) {
 			}
 			drawDir(s.dt[childPath].active, 0, s.selectedFiles, files, offset, width)
 		}
-	} else if parent.isSymL && parent.symName != "" {
-		if f, err := os.Stat(parent.symName); f.IsDir() && err == nil {
-			childP := parent.symName
+	} else if parent.isLink && parent.link.location != "" && !parent.link.broken {
+		if f, err := os.Stat(parent.link.location); f.IsDir() && err == nil {
+			childP := parent.link.location
 			files, c, err := readDir(childP)
 			if !os.IsPermission(err) && len(files) > 0 {
 				if files[0].isReal {

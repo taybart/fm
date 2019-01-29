@@ -66,9 +66,9 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 		if s.active.isDir {
 			dn = s.cd + "/" + s.active.name
 		}
-		if s.active.isSymL {
-			if f, err := os.Stat(s.active.symName); f.IsDir() && err == nil {
-				dn = s.active.symName
+		if s.active.isLink && !s.active.link.broken {
+			if f, err := os.Stat(s.active.link.location); f.IsDir() && err == nil {
+				dn = s.active.link.location
 			}
 		}
 		// if a new directory name exists go there
