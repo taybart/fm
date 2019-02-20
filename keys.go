@@ -134,10 +134,11 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 	}
 	switch ev.Key {
 	case termbox.KeySpace:
-		if _, ok := s.selectedFiles[s.active.name]; !ok {
-			s.selectedFiles[s.active.name] = false
+		if _, exist := s.selectedFiles[s.active.fullPath]; !exist {
+			s.selectedFiles[s.active.fullPath] = s.active
+		} else {
+			delete(s.selectedFiles, s.active.fullPath)
 		}
-		s.selectedFiles[s.active.name] = !s.selectedFiles[s.active.name]
 		s.dt[s.cd].active++
 	case termbox.KeyCtrlJ:
 		if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {

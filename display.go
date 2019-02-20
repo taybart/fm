@@ -46,7 +46,7 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 				str += " -> " + f.link.location
 			}
 		}
-		if selected[f.name] {
+		if selected[f.fullPath] {
 			str = " " + str
 		}
 
@@ -69,7 +69,7 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 				str = str[:len(str)-(len(c)+1)] + c + " "
 			}
 		}
-		fg, bg := getColors(f, a, selected[f.name])
+		fg, bg := getColors(f, a, selected[f.fullPath])
 
 		printString(offset, i+topOffset, width, str, true, fg, bg)
 	}
@@ -124,7 +124,14 @@ func drawParentDir(files []pseudofile, s *fmState, count int) {
 	}
 	// Draw parent dir in first column
 	width := int(float64(cr[0]) / 10.0 * float64(cw))
-	drawDir(s.dt[parentPath].active, count, s.selectedFiles, parentFiles, 0, width)
+
+	// @TODO temp
+	selectedFiles := make(map[string]bool)
+	for f := range s.selectedFiles {
+		selectedFiles[f] = true
+	}
+
+	drawDir(s.dt[parentPath].active, count, selectedFiles, parentFiles, 0, width)
 
 }
 
@@ -153,7 +160,13 @@ func drawChildDir(parent pseudofile, s *fmState, count *int) {
 			if _, ok := s.dt[childPath]; !ok {
 				s.dt[childPath] = &dir{active: 0}
 			}
-			drawDir(s.dt[childPath].active, 0, s.selectedFiles, files, offset, width)
+
+			// @TODO temp
+			selectedFiles := make(map[string]bool)
+			for f := range s.selectedFiles {
+				selectedFiles[f] = true
+			}
+			drawDir(s.dt[childPath].active, 0, selectedFiles, files, offset, width)
 		}
 	} else if parent.isLink && parent.link.location != "" && !parent.link.broken {
 		if f, err := os.Stat(parent.link.location); f.IsDir() && err == nil {
@@ -166,14 +179,19 @@ func drawChildDir(parent pseudofile, s *fmState, count *int) {
 				if _, ok := s.dt[childP]; !ok {
 					s.dt[childP] = &dir{active: 0}
 				}
-				drawDir(s.dt[childP].active, 0, s.selectedFiles, files, offset, width)
+				// @TODO temp
+				selectedFiles := make(map[string]bool)
+				for f := range s.selectedFiles {
+					selectedFiles[f] = true
+				}
+				drawDir(s.dt[childP].active, 0, selectedFiles, files, offset, width)
 			}
 		}
 	} else if parent.isReal &&
 		parent.f.Size() < 100*1024*1024 {
 
 		n := parent.name
-		cmd := exec.Command("cat", n)
+		cmd := exec.Command("strings", n)
 		buf, _ := cmd.Output()
 		if len(buf) > cw*tbheight-2 {
 			buf = buf[:cw*tbheight-2]
@@ -252,7 +270,12 @@ func draw(s *fmState) {
 		}
 		offset := int(float64(cr[0]) / 10.0 * float64(cw))
 		width := int(float64(cr[1]) / 10.0 * float64(cw))
-		drawDir(s.dt[s.cd].active, childCount, s.selectedFiles, files, offset, width)
+		// @TODO temp
+		selectedFiles := make(map[string]bool)
+		for f := range s.selectedFiles {
+			selectedFiles[f] = true
+		}
+		drawDir(s.dt[s.cd].active, childCount, selectedFiles, files, offset, width)
 	}
 
 	drawHeader(s.cmd, files, s.dt, s.cd)

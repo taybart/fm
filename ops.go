@@ -77,7 +77,7 @@ func moveFile(s *fmState) error {
 		}
 		os.Remove(s.copySource.fullPath)
 	}
-	s.selectedFiles = map[string]bool{} // clear selected files
+	s.selectedFiles = map[string]pseudofile{} // clear selected files
 	return nil
 }
 func pasteFile(s *fmState) error {
@@ -87,12 +87,11 @@ func pasteFile(s *fmState) error {
 	if len(s.selectedFiles) == 0 {
 		return pasteSingleFile(s, s.copySource)
 	}
-	// for fn := range s.selectedFiles {
-	// f := pseudofile{name: f.Name(), fullPath: fullPath, symName: symName, isDir: f.IsDir(), isReal: true, isSymL: isSymL, f: f}
-	// pasteSingleFile(s, f)
-	// }
+	for _, f := range s.selectedFiles {
+		pasteSingleFile(s, f)
+	}
 
-	s.selectedFiles = map[string]bool{} // clear selected files
+	s.selectedFiles = map[string]pseudofile{} // clear selected files
 	return nil
 }
 

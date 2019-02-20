@@ -16,6 +16,7 @@ type dir struct {
 	active   int
 	name     string
 	selected []string
+	files    *[]pseudofile
 }
 
 type directoryTree map[string]*dir
@@ -29,6 +30,7 @@ type pseudofile struct {
 	link     link
 	f        os.FileInfo
 }
+
 type link struct {
 	location string
 	broken   bool
@@ -125,9 +127,15 @@ func readDir(name string) ([]pseudofile, int, error) {
 				broken = true
 			}
 		}
-		fullPath, err := filepath.Abs(f.Name())
-		if err != nil {
-			log.Errorln(err)
+		var fullPath string
+		if name != "." {
+			fullPath = name + "/" + f.Name()
+		} else {
+			var err error
+			fullPath, err = filepath.Abs(f.Name())
+			if err != nil {
+				log.Errorln(err)
+			}
 		}
 		pfs[i] = pseudofile{
 			name: f.Name(), fullPath: fullPath,
@@ -139,6 +147,7 @@ func readDir(name string) ([]pseudofile, int, error) {
 	if len(pfs) == 0 {
 		pfs = append(pfs, pseudofile{name: "empty directory...", isDir: false, isReal: false})
 	}
+
 	return pfs, count, nil
 }
 

@@ -18,7 +18,7 @@ type fmState struct {
 	copyBufReady  bool
 	moveFile      bool
 	lastInput     rune
-	selectedFiles map[string]bool
+	selectedFiles map[string]pseudofile
 }
 
 var conf config
@@ -35,7 +35,7 @@ func main() {
 
 	setupLog()
 
-	sf := map[string]bool{}
+	sf := make(map[string]pseudofile)
 	s := &fmState{cmd: "", mode: normal, selectedFiles: sf}
 
 	setupDisplay()
