@@ -158,6 +158,8 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 		}
 	case termbox.MouseLeft:
 		s.dt[s.cd].active = ev.MouseY - 1
+	case termbox.KeyEsc:
+		s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}
 }
 
