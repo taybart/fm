@@ -161,7 +161,7 @@ func undeleteFile() {
 		t := deletedFiles
 		last := t[len(t)-1]
 		deletedFiles = t[:len(t)-1] // pop
-		tf := home + "/.tmp/gofm_trash/" + last
+		tf := home + "/.tmp/fm_trash/" + last
 		os.Rename(tf, last)
 	}
 }
@@ -204,6 +204,18 @@ func fuzzyFind(s *fmState) {
 				}
 				navtree = append(navtree, s.cd)
 				os.Chdir(dn)
+			} else if s.dir[i].isLink && !s.dir[i].link.broken {
+				if f, err := os.Stat(s.dir[i].link.location); f.IsDir() && err == nil {
+					dn := s.dir[i].link.location
+					if s.cd == "/" {
+						dn = s.cd + s.dir[i].name
+					}
+					if _, ok := s.dt[dn]; !ok {
+						s.dt[dn] = &dir{active: 0}
+					}
+					navtree = append(navtree, s.cd)
+					os.Chdir(dn)
+				}
 			}
 		}
 	}
@@ -211,23 +223,23 @@ func fuzzyFind(s *fmState) {
 
 func moveToTrash(fn string) {
 	home, _ := os.LookupEnv("HOME")
-	if exists, err := fileExists(home + "/.tmp/gofm_trash/"); !exists {
+	if exists, err := fileExists(home + "/.tmp/fm_trash/"); !exists {
 		if err != nil {
 			log.Errorln(err)
 		}
-		err = os.MkdirAll(home+"/.tmp/gofm_trash/", os.ModeDir|0755)
+		err = os.MkdirAll(home+"/.tmp/fm_trash/", os.ModeDir|0755)
 		if err != nil {
 			log.Errorln(err)
 		}
 	}
-	os.Rename(fn, home+"/.tmp/gofm_trash/"+fn)
+	os.Rename(fn, home+"/.tmp/fm_trash/"+fn)
 	deletedFiles = append(deletedFiles, fn)
 }
 
 func takeOutTrash() {
 	home, _ := os.LookupEnv("HOME")
-	os.RemoveAll(home + "/.tmp/gofm_trash/")
-	os.MkdirAll(home+"/.tmp/gofm_trash/", os.ModeDir|0755)
+	os.RemoveAll(home + "/.tmp/fm_trash/")
+	os.MkdirAll(home+"/.tmp/fm_trash/", os.ModeDir|0755)
 }
 
 func finalize() {
@@ -239,13 +251,16 @@ func finalize() {
 func runThis(toRun string, args ...string) error {
 	termbox.Close()
 	cmd := exec.Command(toRun, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	done := make(chan error)
+	go func() {
+		cmd.Stdout = os.Stdout
+		cmd.Stdin = os.Stdin
+		cmd.Stderr = os.Stderr
+		done <- cmd.Run()
+	}()
+	err := <-done
 	if err != nil {
-		log.Errorln(err)
-		panic(err)
+		log.Fatalln(err)
 	}
 	setupDisplay()
 	return nil

@@ -47,12 +47,12 @@ func main() {
 
 	for {
 
-		s.dir, _, err = readDir(".")
+		s.cd = pwd()
+		s.dir, _, err = readDir(s.cd)
 		if err != nil {
 			panic(err)
 		}
 
-		s.cd = pwd()
 		// Bounds check
 		if s.dt[s.cd].active > len(s.dir)-1 {
 			s.dt[s.cd].active = len(s.dir) - 1
@@ -76,7 +76,7 @@ func main() {
 func setupLog() {
 	var err error
 	home := os.Getenv("HOME")
-	log.UseColors = false
+	log.UseColors(false)
 	conf, err = loadConfig(home + "/.config/fm/config.json")
 	log.SetOutput(conf.Folder + "/fm.log")
 	if err != nil {

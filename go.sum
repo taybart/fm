@@ -6,3 +6,5 @@ github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/taybart/log v0.0.0-20181212204646-0cc423998b4d h1:2Cc2x5OAQh3bmkNRs3xOp43kNy3CvGlSDlTJeEGa56A=
 github.com/taybart/log v0.0.0-20181212204646-0cc423998b4d/go.mod h1:bCgtL+Wtq1ZRchiS8HS2El2S44c13N3WsjckA+I8wqU=
+github.com/taybart/log v0.0.0-20190227221442-9463c94ca772 h1:8Q8q1jAKcGjMTrOb0rPM/Wmy6k1atV7lHoUTMyUCAEk=
+github.com/taybart/log v0.0.0-20190227221442-9463c94ca772/go.mod h1:bCgtL+Wtq1ZRchiS8HS2El2S44c13N3WsjckA+I8wqU=

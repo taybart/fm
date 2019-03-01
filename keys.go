@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
+	"github.com/taybart/log"
 	"os"
 	"strings"
 )
