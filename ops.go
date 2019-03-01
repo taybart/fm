@@ -71,11 +71,13 @@ func moveFile(s *fmState) error {
 		return errors.New("No file in copy buffer")
 	}
 	if len(s.selectedFiles) == 0 {
-		err := pasteSingleFile(s, s.copySource)
+		err := pasteSingleFile(s, s.copySource, true)
 		if err != nil {
 			return err
 		}
-		os.Remove(s.copySource.fullPath)
+	}
+	for _, f := range s.selectedFiles {
+		pasteSingleFile(s, f, true)
 	}
 	s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	return nil
@@ -85,17 +87,17 @@ func pasteFile(s *fmState) error {
 		return errors.New("No file in copy buffer")
 	}
 	if len(s.selectedFiles) == 0 {
-		return pasteSingleFile(s, s.copySource)
+		return pasteSingleFile(s, s.copySource, false)
 	}
 	for _, f := range s.selectedFiles {
-		pasteSingleFile(s, f)
+		pasteSingleFile(s, f, false)
 	}
 
 	s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	return nil
 }
 
-func pasteSingleFile(s *fmState, file pseudofile) error {
+func pasteSingleFile(s *fmState, file pseudofile, move bool) error {
 	destName := s.cd + "/" + file.name
 	if _, err := os.Stat(destName); err == nil {
 		ext := strings.Split(file.name, ".")
@@ -106,7 +108,11 @@ func pasteSingleFile(s *fmState, file pseudofile) error {
 		}
 	}
 	if file.isDir {
-		runThis("cp", "-a", file.fullPath, destName)
+		if move {
+			runThis("mv", file.fullPath, destName)
+		} else {
+			runThis("cp", "-a", file.fullPath, destName)
+		}
 	} else {
 		buf := make([]byte, file.f.Size())
 		source, err := os.Open(file.fullPath)
@@ -126,6 +132,9 @@ func pasteSingleFile(s *fmState, file pseudofile) error {
 			if _, err := destination.Write(buf[:n]); err != nil {
 				return err
 			}
+		}
+		if move {
+			os.Remove(file.fullPath)
 		}
 	}
 	return nil
