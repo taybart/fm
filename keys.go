@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/nsf/termbox-go"
-	"github.com/taybart/log"
+	// "github.com/taybart/log"
 	"os"
 	"strings"
 )
@@ -199,6 +199,10 @@ func (s *fmState) parseCommmandMode(ev termbox.Event) {
 		}
 	case termbox.KeySpace:
 		s.cmd += " "
+	case termbox.KeyTab:
+		if s.cmd[:3] == ":rn" {
+			s.cmd = ":rn " + s.active.name
+		}
 	default:
 		s.cmd += string(ev.Ch)
 	}
