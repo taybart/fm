@@ -2,6 +2,8 @@
 
 A tui file manager written in go. Ranger is written in icky python and it is far too complicated.
 
+![30-4-2019](https://thumbs.gfycat.com/HalfFondImperialeagle-size_restricted.gif)
+
 ## Commands
 
 | : cmd       | alt cmd | Function            | Description                                                                                            |
