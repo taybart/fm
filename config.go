@@ -18,8 +18,11 @@ type config struct {
 
 func loadConfig(name string) (config, error) {
 	home := os.Getenv("HOME")
-	if _, err := os.Stat(home + ".config/fm"); os.IsNotExist(err) {
-		os.MkdirAll(home+".config/fm", os.ModePerm)
+	if _, err := os.Stat(home + "/.config/fm"); os.IsNotExist(err) {
+		err := os.MkdirAll(home+"/.config/fm", os.ModePerm)
+		if err != nil {
+			return config{}, err
+		}
 	}
 	j, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
