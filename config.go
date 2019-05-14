@@ -17,14 +17,17 @@ type config struct {
 }
 
 func loadConfig(name string) (config, error) {
-	j, err := os.Open(name)
+	home := os.Getenv("HOME")
+	if _, err := os.Stat(home + ".config/fm"); os.IsNotExist(err) {
+		os.MkdirAll(home+".config/fm", os.ModePerm)
+	}
+	j, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return config{}, err
 	}
 
 	defer j.Close()
 
-	home := os.Getenv("HOME")
 	// Default Config
 	c := config{
 		ShowHidden:   false,
