@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/nsf/termbox-go"
+	// "github.com/nsf/termbox-go"
+	"github.com/gdamore/tcell"
 	"github.com/taybart/log"
 	"os"
 )
@@ -23,6 +24,8 @@ type fmState struct {
 
 var conf config
 
+var scr tcell.Screen
+
 func main() {
 	var err error
 	_, sessionActive := os.LookupEnv("FM_SESSION_ACTIVE")
@@ -39,7 +42,7 @@ func main() {
 	s := &fmState{cmd: "", mode: normal, selectedFiles: sf}
 
 	setupDisplay()
-	defer termbox.Close()
+	defer scr.Fini()
 
 	s.cd = pwd()
 	s.dt = make(directoryTree)
@@ -63,11 +66,12 @@ func main() {
 		s.active = s.dir[s.dt[s.cd].active]
 
 		draw(s)
-
-		switch ev := termbox.PollEvent(); ev.Type {
-		case termbox.EventResize:
+		ev := scr.PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventResize:
 			draw(s)
-		case termbox.EventKey, termbox.EventMouse:
+		// case *tcell.EventKey, *tcell.EventMouse:
+		case *tcell.EventKey:
 			s.ParseKeyEvent(ev)
 		}
 	}

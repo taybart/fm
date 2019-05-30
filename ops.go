@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/nsf/termbox-go"
+	// "github.com/nsf/tcell-go"
 	"github.com/pkg/errors"
 	"github.com/taybart/log"
 	"io"
@@ -167,7 +167,7 @@ func undeleteFile() {
 }
 
 func fzf(input func(in io.WriteCloser)) []string {
-	termbox.Close()
+	scr.Fini()
 	shell := os.Getenv("SHELL")
 	if len(shell) == 0 {
 		shell = "sh"
@@ -243,13 +243,13 @@ func takeOutTrash() {
 }
 
 func finalize() {
-	termbox.Close()
+	scr.Fini()
 	takeOutTrash()
 	os.Exit(0)
 }
 
 func runThis(toRun string, args ...string) error {
-	termbox.Close()
+	scr.Fini()
 	cmd := exec.Command(toRun, args...)
 	done := make(chan error)
 	go func() {

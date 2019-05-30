@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/nsf/termbox-go"
+	// "github.com/nsf/tcell-go"
+	"github.com/gdamore/tcell"
 	// "github.com/taybart/log"
 	"os"
 	"strings"
@@ -29,10 +30,10 @@ var a = struct {
 
 var deletedFiles = []string{}
 
-func (s *fmState) ParseKeyEvent(ev termbox.Event) {
+func (s *fmState) ParseKeyEvent(ev *tcell.EventKey) {
 	switch s.mode {
 	case single:
-		s.cmd = string(ev.Ch)
+		s.cmd = string(ev.Rune())
 		s.mode = normal
 		s.RunLetterCommand()
 	case command:
@@ -42,11 +43,11 @@ func (s *fmState) ParseKeyEvent(ev termbox.Event) {
 	case normal:
 		s.parseNormalMode(ev)
 	}
-	s.lastInput = ev.Ch
+	s.lastInput = ev.Rune()
 }
 
-func (s *fmState) parseNormalMode(ev termbox.Event) {
-	switch ev.Ch {
+func (s *fmState) parseNormalMode(ev *tcell.EventKey) {
+	switch ev.Rune() {
 	/* Movement */
 	case 'h':
 		if s.cd != "/" {
@@ -132,41 +133,41 @@ func (s *fmState) parseNormalMode(ev termbox.Event) {
 		fuzzyFind(s)
 	case 'q':
 		finalize()
-	}
-	switch ev.Key {
-	case termbox.KeySpace:
+	case ' ':
 		if _, exist := s.selectedFiles[s.active.fullPath]; !exist {
 			s.selectedFiles[s.active.fullPath] = s.active
 		} else {
 			delete(s.selectedFiles, s.active.fullPath)
 		}
 		s.dt[s.cd].active++
-	case termbox.KeyCtrlJ:
+	}
+	switch ev.Key() {
+	case tcell.KeyCtrlJ:
 		if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
 			s.dt[s.cd].active += conf.JumpAmount
 		}
-	case termbox.KeyCtrlK:
+	case tcell.KeyCtrlK:
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active -= conf.JumpAmount
 		}
-	case termbox.MouseWheelUp:
+	/* case tcell.MouseWheelUp:
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active--
 		}
-	case termbox.MouseWheelDown:
+	case tcell.MouseWheelDown:
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active++
 		}
-	case termbox.MouseLeft:
-		s.dt[s.cd].active = ev.MouseY - 1
-	case termbox.KeyEsc:
+	case tcell.MouseLeft:
+		s.dt[s.cd].active = ev.MouseY - 1 */
+	case tcell.KeyEsc:
 		s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}
 }
 
-func (s *fmState) parseConfirmMode(ev termbox.Event) {
+func (s *fmState) parseConfirmMode(ev *tcell.EventKey) {
 	s.mode = normal
-	if ev.Ch == 'Y' || ev.Ch == 'y' {
+	if ev.Rune() == 'Y' || ev.Rune() == 'y' {
 		s.cmd = a.cmd
 		a.confirmed = true
 		if a.lagmode == command {
@@ -180,31 +181,31 @@ func (s *fmState) parseConfirmMode(ev termbox.Event) {
 	s.cmd = ""
 }
 
-func (s *fmState) parseCommmandMode(ev termbox.Event) {
-	switch ev.Key {
-	case termbox.KeyEsc:
+func (s *fmState) parseCommmandMode(ev *tcell.EventKey) {
+	switch ev.Key() {
+	case tcell.KeyEsc:
 		s.mode = normal
 		s.cmd = ""
-	case termbox.KeyEnter:
+	case tcell.KeyEnter:
 		s.mode = normal
 		if len(s.cmd) > 1 {
 			s.RunFullCommand()
 		}
-	case termbox.KeyBackspace, termbox.KeyBackspace2:
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if len(s.cmd) > 1 {
 			s.cmd = s.cmd[:len(s.cmd)-1]
 		} else {
 			s.cmd = ""
 			s.mode = normal
 		}
-	case termbox.KeySpace:
-		s.cmd += " "
-	case termbox.KeyTab:
+	// case tcell.KeySpace:
+	// s.cmd += " "
+	case tcell.KeyTab:
 		if s.cmd[:3] == ":rn" {
 			s.cmd = ":rn " + s.active.name
 		}
 	default:
-		s.cmd += string(ev.Ch)
+		s.cmd += string(ev.Rune())
 	}
 }
 

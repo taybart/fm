@@ -4,7 +4,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/nsf/termbox-go"
+	// "github.com/nsf/termbox-go"
+	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/encoding"
 	"github.com/taybart/log"
 	"os"
 	"os/exec"
@@ -13,11 +15,12 @@ import (
 
 const (
 	topOffset = 1
-	fgDefault = termbox.Attribute(0xe0)
+	// fgDefault = tcell.Attr(0xe0)
+	fgDefault = tcell.Color224
 )
 
 func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, offset, width int) {
-	_, tbheight := termbox.Size()
+	_, tbheight := scr.Size()
 	viewbox := tbheight - 2
 	oob := 0
 	// are we off the edge of the display
@@ -69,49 +72,61 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 				str = str[:len(str)-(len(c)+1)] + c + " "
 			}
 		}
-		fg, bg := getColors(f, a, selected[f.fullPath])
+		s := getColors(f, a, selected[f.fullPath])
 
-		printString(offset, i+topOffset, width, str, true, fg, bg)
+		// puts(offset, i+topOffset, width, str, true, fg, bg)
+		puts(offset, i+topOffset, width, str, true, s)
 	}
 }
 
-func getColors(f pseudofile, active, selected bool) (termbox.Attribute, termbox.Attribute) {
-	fg := fgDefault
-	bg := termbox.ColorDefault
+func getColors(f pseudofile, active, selected bool) tcell.Style {
+	s := tcell.StyleDefault
+	// fg := fgDefault
+	// bg := tcell.ColorDefault
 	if active {
-		bg = termbox.ColorBlue
+		// bg = tcell.ColorBlue
+		s = s.Background(tcell.ColorBlue)
 	}
 
 	if f.isDir {
-		fg = termbox.ColorCyan
+		// fg = tcell.ColorTeal
+		s = s.Foreground(tcell.ColorTeal)
 		if active {
-			fg = fgDefault
+			// fg = fgDefault
+			s = s.Foreground(tcell.ColorDefault)
 		}
-		fg |= termbox.AttrBold
+		s = s.Bold(true)
+		// fg |= tcell.AttrBold
 	} else {
 
 		if !f.isReal {
-			fg = fgDefault
+			// fg = fgDefault
+			s = s.Foreground(tcell.ColorDefault)
 		} else if (f.f.Mode()&0111) != 0 && !f.isLink {
-			fg = termbox.ColorYellow | termbox.AttrBold
+			// fg = tcell.ColorYellow | tcell.AttrBold
+			s = s.Foreground(tcell.ColorYellow).Bold(true)
 		} else if f.isLink && f.link.location != "" {
-			fg = termbox.ColorMagenta | termbox.AttrBold
+			// fg = tcell.ColorMagenta | tcell.AttrBold
+			s = s.Foreground(tcell.ColorCrimson).Bold(true)
 			if cf, err := os.Stat(f.link.location); err == nil && cf.IsDir() {
-				fg = termbox.ColorBlue | termbox.AttrBold
+				// fg = tcell.ColorBlue | tcell.AttrBold
+				s = s.Foreground(tcell.ColorBlue).Bold(true)
 			}
 			if f.link.broken {
-				fg = termbox.ColorRed | termbox.AttrBold
+				// fg = tcell.ColorRed | tcell.AttrBold
+				s = s.Foreground(tcell.ColorRed).Bold(true)
 			}
 		}
 	}
 	if selected {
-		fg = termbox.ColorYellow | termbox.AttrBold
+		// fg = tcell.ColorYellow | tcell.AttrBold
+		s = s.Foreground(tcell.ColorYellow).Bold(true)
 	}
-	return fg, bg
+	return s
 }
 
 func drawParentDir(files []pseudofile, s *fmState, count int) {
-	tbwidth, _ := termbox.Size()
+	tbwidth, _ := scr.Size()
 	cr := conf.ColumnRatios
 	cw := conf.ColumnWidth
 	if cw < 0 {
@@ -136,7 +151,7 @@ func drawParentDir(files []pseudofile, s *fmState, count int) {
 }
 
 func drawChildDir(parent pseudofile, s *fmState, count *int) {
-	tbwidth, tbheight := termbox.Size()
+	tbwidth, tbheight := scr.Size()
 	cr := conf.ColumnRatios
 	cw := conf.ColumnWidth
 	if cw < 0 {
@@ -196,13 +211,13 @@ func drawChildDir(parent pseudofile, s *fmState, count *int) {
 		if len(buf) > cw*tbheight-2 {
 			buf = buf[:cw*tbheight-2]
 		}
-		printString(offset, topOffset, width,
-			string(buf), conf.WrapText, termbox.ColorDefault, termbox.ColorDefault)
+		puts(offset, topOffset, width,
+			string(buf), conf.WrapText, tcell.StyleDefault)
 	}
 }
 
 func drawHeader(userinput string, files []pseudofile, dt directoryTree, cd string) {
-	tbwidth, _ := termbox.Size()
+	tbwidth, _ := scr.Size()
 	// Print user/cd at top
 	un := os.Getenv("USER")
 	hn, err := os.Hostname()
@@ -210,7 +225,7 @@ func drawHeader(userinput string, files []pseudofile, dt directoryTree, cd strin
 		log.Errorln(err)
 	}
 	ustr := un + "@" + hn
-	printString(0, 0, tbwidth, ustr, true, termbox.ColorGreen, termbox.ColorDefault)
+	puts(0, 0, tbwidth, ustr, true, tcell.StyleDefault.Foreground(tcell.ColorGreen))
 	dn := cd
 	oset := 0
 	if cd != "/" {
@@ -218,36 +233,37 @@ func drawHeader(userinput string, files []pseudofile, dt directoryTree, cd strin
 		oset = 1
 	}
 
-	printString(len(ustr)+1, 0, tbwidth, dn, true, termbox.ColorBlue, termbox.ColorDefault)
+	puts(len(ustr)+1, 0, tbwidth, dn, true, tcell.StyleDefault.Foreground(tcell.ColorGreen))
 	f := files[dt[cd].active]
 	name := f.name
 	if f.isDir {
 		name += "/"
 	}
-	printString(len(ustr)+len(cd)+1+oset, 0, tbwidth, name,
-		true, termbox.ColorDefault, termbox.ColorDefault)
+	puts(len(ustr)+len(cd)+1+oset, 0, tbwidth, name,
+		true, tcell.StyleDefault)
 }
 
 func drawFooter(userinput string, files []pseudofile, dt directoryTree, cd string) {
-	tbwidth, tbheight := termbox.Size()
+	tbwidth, tbheight := scr.Size()
 	if len(userinput) > 0 {
-		printString(0, tbheight-1, tbwidth,
-			userinput+"█", true, termbox.ColorDefault, termbox.ColorDefault)
+		puts(0, tbheight-1, tbwidth,
+			userinput+"█", true, tcell.StyleDefault)
 	} else {
 		f := files[dt[cd].active]
 		if f.isReal {
 			s := fmt.Sprintf("%s %d %s %s",
 				f.f.Mode(), f.f.Size(),
 				f.f.ModTime().Format("Jan 2 15:04"), f.name)
-			printString(0, tbheight-1, tbwidth,
-				s, true, termbox.ColorDefault, termbox.ColorDefault)
+			puts(0, tbheight-1, tbwidth,
+				s, true, tcell.StyleDefault)
 		}
 	}
 }
 
 func draw(s *fmState) {
+	scr.Clear()
 
-	tbw, tbh := termbox.Size()
+	tbw, tbh := scr.Size()
 	if tbw <= 0 || tbh <= 0 {
 		return
 	}
@@ -262,7 +278,7 @@ func draw(s *fmState) {
 	drawChildDir(files[s.dt[s.cd].active], s, &childCount)
 
 	{ // Draw current directory
-		tbw, _ := termbox.Size()
+		tbw, _ := scr.Size()
 		cr := conf.ColumnRatios
 		cw := conf.ColumnWidth
 		if cw < 0 {
@@ -282,25 +298,37 @@ func draw(s *fmState) {
 
 	// draw footer for frame
 	drawFooter(s.cmd, files, s.dt, s.cd)
-	render()
+	scr.Show()
+	// render()
 }
 
 func setupDisplay() {
-	err := termbox.Init()
+	var err error
+	scr, err = tcell.NewScreen()
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
-	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
-	// termbox.SetOutputMode(termbox.OutputNormal)
-	termbox.SetOutputMode(termbox.Output256)
+
+	encoding.Register()
+	if err = scr.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+
+	scr.SetStyle(tcell.StyleDefault.
+		Foreground(tcell.ColorDefault).
+		Background(tcell.ColorDefault))
+	scr.EnableMouse()
+	scr.Clear()
 }
 
 func render() {
-	termbox.Flush()
-	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	// scr.Flush()
+	scr.Clear()
 }
 
-func printString(x, y, maxWidth int, s string, wrap bool, fg, bg termbox.Attribute) {
+func puts(x, y, maxWidth int, s string, wrap bool, style tcell.Style) {
 	xstart := x
 	for _, c := range s {
 		if c == '\n' {
@@ -309,7 +337,7 @@ func printString(x, y, maxWidth int, s string, wrap bool, fg, bg termbox.Attribu
 		} else if c == '\r' {
 			x = xstart
 		} else {
-			termbox.SetCell(x, y, c, fg, bg)
+			scr.SetCell(x, y, style, c)
 			x++
 			if x > xstart+maxWidth {
 				if !wrap {
@@ -323,8 +351,8 @@ func printString(x, y, maxWidth int, s string, wrap bool, fg, bg termbox.Attribu
 }
 
 func printPrompt(s string) {
-	tbwidth, tbheight := termbox.Size()
-	printString(tbwidth/4, tbheight/2, tbwidth,
-		s, true, termbox.ColorDefault, termbox.ColorDefault)
+	tbwidth, tbheight := scr.Size()
+	puts(tbwidth/4, tbheight/2, tbwidth,
+		s, true, tcell.StyleDefault)
 	render()
 }
