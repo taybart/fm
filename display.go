@@ -201,7 +201,7 @@ func drawChildDir(parent pseudofile, s *fmState, count *int) {
 			}
 		}
 	} else if parent.isReal &&
-		parent.f.Size() < 100*1024*1024 {
+		parent.f.Size() < 3*1024*1024 {
 
 		n := parent.name
 		cmd := exec.Command("strings", n)
