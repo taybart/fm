@@ -14,9 +14,15 @@ import (
 )
 
 const (
-	topOffset = 1
-	// fgDefault = tcell.Attr(0xe0)
-	fgDefault = tcell.Color224
+	topOffset        = 1
+	fgDefault        = tcell.Color223
+	colorFolder      = tcell.Color66
+	colorFgActive    = tcell.Color235
+	colorHighlight   = tcell.Color109
+	colorSymlinkGood = tcell.Color142
+	colorSymlinkBad  = tcell.Color167
+	colorExec        = tcell.Color124
+	colorSelected    = tcell.Color214
 )
 
 func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, offset, width int) {
@@ -81,46 +87,38 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 
 func getColors(f pseudofile, active, selected bool) tcell.Style {
 	s := tcell.StyleDefault
-	// fg := fgDefault
-	// bg := tcell.ColorDefault
+	s = s.Foreground(fgDefault)
 	if active {
-		// bg = tcell.ColorBlue
-		s = s.Background(tcell.ColorBlue)
+		s = s.Background(colorHighlight)
+		s = s.Foreground(colorFgActive)
 	}
 
 	if f.isDir {
-		// fg = tcell.ColorTeal
-		s = s.Foreground(tcell.ColorTeal)
+		s = s.Foreground(colorFolder)
 		if active {
-			// fg = fgDefault
-			s = s.Foreground(tcell.ColorDefault)
+			s = s.Foreground(colorFgActive)
 		}
 		s = s.Bold(true)
-		// fg |= tcell.AttrBold
 	} else {
 
 		if !f.isReal {
-			// fg = fgDefault
-			s = s.Foreground(tcell.ColorDefault)
+			s = s.Foreground(fgDefault)
 		} else if (f.f.Mode()&0111) != 0 && !f.isLink {
 			// fg = tcell.ColorYellow | tcell.AttrBold
-			s = s.Foreground(tcell.ColorYellow).Bold(true)
+			s = s.Foreground(colorExec).Bold(true)
 		} else if f.isLink && f.link.location != "" {
 			// fg = tcell.ColorMagenta | tcell.AttrBold
-			s = s.Foreground(tcell.ColorCrimson).Bold(true)
 			if cf, err := os.Stat(f.link.location); err == nil && cf.IsDir() {
 				// fg = tcell.ColorBlue | tcell.AttrBold
-				s = s.Foreground(tcell.ColorBlue).Bold(true)
+				s = s.Foreground(colorSymlinkGood).Bold(true)
 			}
 			if f.link.broken {
-				// fg = tcell.ColorRed | tcell.AttrBold
-				s = s.Foreground(tcell.ColorRed).Bold(true)
+				s = s.Foreground(colorSymlinkBad).Bold(true)
 			}
 		}
 	}
 	if selected {
-		// fg = tcell.ColorYellow | tcell.AttrBold
-		s = s.Foreground(tcell.ColorYellow).Bold(true)
+		s = s.Foreground(colorSelected).Bold(true)
 	}
 	return s
 }
