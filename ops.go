@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 )
 
@@ -149,7 +150,13 @@ func deleteFileWithoutTrash(s *fmState) {
 }
 func deleteFile(s *fmState) {
 	if a.confirmed {
-		moveToTrash(s.active.name)
+		if len(s.selectedFiles) == 0 {
+			moveToTrash(s.active.fullPath)
+		} else {
+			for f := range s.selectedFiles {
+				moveToTrash(f)
+			}
+		}
 	} else {
 		a.cmd = s.cmd
 		s.getConfirmation("deletion")
@@ -161,7 +168,7 @@ func undeleteFile() {
 		t := deletedFiles
 		last := t[len(t)-1]
 		deletedFiles = t[:len(t)-1] // pop
-		tf := home + "/.tmp/fm_trash/" + last
+		tf := home + "/.tmp/fm_trash/" + path.Base(last)
 		os.Rename(tf, last)
 	}
 }
@@ -232,7 +239,7 @@ func moveToTrash(fn string) {
 			log.Errorln(err)
 		}
 	}
-	os.Rename(fn, home+"/.tmp/fm_trash/"+fn)
+	os.Rename(fn, home+"/.tmp/fm_trash/"+path.Base(fn))
 	deletedFiles = append(deletedFiles, fn)
 }
 
