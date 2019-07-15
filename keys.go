@@ -265,7 +265,7 @@ func (s *fmState) RunFullCommand() {
 		case "ud", "undelete":
 			undeleteFile()
 		case "rn", "rename":
-			renameFile(s.active, args[1])
+			renameFile(s.active, strings.Join(args[1:], " "))
 		case "e", "edit":
 			editFile(s.active)
 		case "th":
