@@ -123,9 +123,11 @@ func (s *fmState) parseNormalMode(ev *tcell.EventKey) {
 		s.mode = single
 	case ':':
 		s.cmd = ":"
+		s.cmdIndex = 1
 		s.mode = command
 	case 's':
 		s.cmd = ":!"
+		s.cmdIndex = 2
 		s.mode = command
 	case 'S':
 		newShell()
@@ -186,26 +188,37 @@ func (s *fmState) parseCommmandMode(ev *tcell.EventKey) {
 	case tcell.KeyEsc:
 		s.mode = normal
 		s.cmd = ""
+		s.cmdIndex = 0
 	case tcell.KeyEnter:
 		s.mode = normal
 		if len(s.cmd) > 1 {
 			s.RunFullCommand()
 		}
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if len(s.cmd) > 1 {
-			s.cmd = s.cmd[:len(s.cmd)-1]
-		} else {
+		if len(s.cmd) > 1 && s.cmdIndex > 1 {
+			s.cmdIndex--
+			s.cmd = string(append([]rune(s.cmd[:s.cmdIndex]), []rune(s.cmd[s.cmdIndex+1:])...))
+		} else if len(s.cmd) == 1 {
 			s.cmd = ""
+			s.cmdIndex = 0
 			s.mode = normal
 		}
-	// case tcell.KeySpace:
-	// s.cmd += " "
+	case tcell.KeyRight:
+		if s.cmd != "" && s.cmdIndex < len(s.cmd) {
+			s.cmdIndex++
+		}
+	case tcell.KeyLeft:
+		if s.cmd != "" && s.cmdIndex > 1 {
+			s.cmdIndex--
+		}
 	case tcell.KeyTab:
 		if s.cmd[:3] == ":rn" {
 			s.cmd = ":rn " + s.active.name
+			s.cmdIndex += len(s.active.name) + 1
 		}
 	default:
-		s.cmd += string(ev.Rune())
+		s.cmd = s.cmd[:s.cmdIndex] + string(ev.Rune()) + s.cmd[s.cmdIndex:]
+		s.cmdIndex++
 	}
 }
 
@@ -234,7 +247,6 @@ func (s *fmState) RunLetterCommand() {
 
 }
 func (s *fmState) RunFullCommand() {
-
 	a.lagmode = command
 	args := strings.Split(s.cmd, " ")
 	if s.cmd[1] == '!' {

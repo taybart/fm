@@ -13,6 +13,7 @@ type fmState struct {
 	dir           []pseudofile
 	dt            directoryTree
 	cmd           string
+	cmdIndex      int
 	active        pseudofile
 	mode          mode
 	copySource    pseudofile
@@ -39,7 +40,7 @@ func main() {
 	setupLog()
 
 	sf := make(map[string]pseudofile)
-	s := &fmState{cmd: "", mode: normal, selectedFiles: sf}
+	s := &fmState{cmd: "", cmdIndex: 0, mode: normal, selectedFiles: sf}
 
 	setupDisplay()
 	defer scr.Fini()

@@ -104,12 +104,9 @@ func getColors(f pseudofile, active, selected bool) tcell.Style {
 		if !f.isReal {
 			s = s.Foreground(fgDefault)
 		} else if (f.f.Mode()&0111) != 0 && !f.isLink {
-			// fg = tcell.ColorYellow | tcell.AttrBold
 			s = s.Foreground(colorExec).Bold(true)
 		} else if f.isLink && f.link.location != "" {
-			// fg = tcell.ColorMagenta | tcell.AttrBold
 			if cf, err := os.Stat(f.link.location); err == nil && cf.IsDir() {
-				// fg = tcell.ColorBlue | tcell.AttrBold
 				s = s.Foreground(colorSymlinkGood).Bold(true)
 			}
 			if f.link.broken {
@@ -241,13 +238,19 @@ func drawHeader(userinput string, files []pseudofile, dt directoryTree, cd strin
 		true, tcell.StyleDefault)
 }
 
-func drawFooter(userinput string, files []pseudofile, dt directoryTree, cd string) {
+func (s *fmState) drawFooter(files []pseudofile) {
 	tbwidth, tbheight := scr.Size()
-	if len(userinput) > 0 {
+	if len(s.cmd) > 0 {
 		puts(0, tbheight-1, tbwidth,
-			userinput+"█", true, tcell.StyleDefault)
+			s.cmd, true, tcell.StyleDefault)
+		c := ' '
+		if s.cmdIndex < len(s.cmd) {
+			c = rune(s.cmd[s.cmdIndex])
+		}
+		style := tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite)
+		scr.SetCell(s.cmdIndex, tbheight-1, style, c)
 	} else {
-		f := files[dt[cd].active]
+		f := files[s.dt[s.cd].active]
 		if f.isReal {
 			s := fmt.Sprintf("%s %d %s %s",
 				f.f.Mode(), f.f.Size(),
@@ -295,7 +298,7 @@ func draw(s *fmState) {
 	drawHeader(s.cmd, files, s.dt, s.cd)
 
 	// draw footer for frame
-	drawFooter(s.cmd, files, s.dt, s.cd)
+	s.drawFooter(files)
 	scr.Show()
 	// render()
 }
