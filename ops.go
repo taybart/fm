@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	// "github.com/nsf/tcell-go"
 	"github.com/pkg/errors"
 	"github.com/taybart/log"
 	"io"
@@ -258,17 +257,18 @@ func finalize() {
 func runThis(toRun string, args ...string) error {
 	scr.Fini()
 	cmd := exec.Command(toRun, args...)
-	done := make(chan error)
-	go func() {
-		cmd.Stdout = os.Stdout
-		cmd.Stdin = os.Stdin
-		cmd.Stderr = os.Stderr
-		done <- cmd.Run()
-	}()
-	err := <-done
+	// done := make(chan error)
+	// go func() {
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	// }()
+	log.Verbose("Executing command", toRun)
+	err := cmd.Run()
 	if err != nil {
 		log.Fatalln(err)
 	}
+	log.Verbose("Done")
 	setupDisplay()
 	return nil
 }

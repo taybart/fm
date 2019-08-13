@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	// "github.com/nsf/termbox-go"
 	"github.com/gdamore/tcell"
 	"github.com/taybart/log"
 	"os"
+	"reflect"
 )
 
 type fmState struct {
@@ -49,8 +49,10 @@ func main() {
 	s.dt = make(directoryTree)
 	s.dt[s.cd] = &dir{active: 0}
 
-	for {
+	counter := 0
 
+	for {
+		log.Verbose("Start", counter)
 		s.cd = pwd()
 		s.dir, _, err = readDir(s.cd)
 		if err != nil {
@@ -67,14 +69,15 @@ func main() {
 		s.active = s.dir[s.dt[s.cd].active]
 
 		draw(s)
-		ev := scr.PollEvent()
-		switch ev := ev.(type) {
-		case *tcell.EventResize:
-			draw(s)
-		// case *tcell.EventKey, *tcell.EventMouse:
+		log.Verbose("waiting for event")
+		event := scr.PollEvent()
+		log.Verbose(reflect.TypeOf(event).String())
+		switch ev := event.(type) {
 		case *tcell.EventKey:
 			s.ParseKeyEvent(ev)
 		}
+		log.Verbose("End", counter)
+		counter++
 	}
 }
 
@@ -82,6 +85,7 @@ func setupLog() {
 	var err error
 	home := os.Getenv("HOME")
 	log.UseColors(false)
+	log.SetTimeFmt("2006-01-02 15:04:05.9999")
 	conf, err = loadConfig(home + "/.config/fm/config.json")
 	log.SetOutput(conf.Folder + "/fm.log")
 	if err != nil {
@@ -89,7 +93,7 @@ func setupLog() {
 		os.Exit(1)
 	}
 	llevel := log.WARN
-	if os.Getenv("ENV") != "production" {
+	if os.Getenv("ENV") == "development" {
 		llevel = log.DEBUG
 	}
 	log.SetLevel(llevel)

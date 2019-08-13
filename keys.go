@@ -3,7 +3,7 @@ package main
 import (
 	// "github.com/nsf/tcell-go"
 	"github.com/gdamore/tcell"
-	// "github.com/taybart/log"
+	"github.com/taybart/log"
 	"os"
 	"strings"
 )
@@ -37,13 +37,15 @@ func (s *fmState) ParseKeyEvent(ev *tcell.EventKey) {
 		s.mode = normal
 		s.RunLetterCommand()
 	case command:
-		go s.parseCommmandMode(ev)
+		s.parseCommmandMode(ev)
 	case confirm:
 		s.parseConfirmMode(ev)
 	case normal:
 		s.parseNormalMode(ev)
 	}
 	s.lastInput = ev.Rune()
+
+	log.Verbose("ParseKeyEvent done")
 }
 
 func (s *fmState) parseNormalMode(ev *tcell.EventKey) {
@@ -152,16 +154,6 @@ func (s *fmState) parseNormalMode(ev *tcell.EventKey) {
 		if len(s.dir) > 0 {
 			s.dt[s.cd].active -= conf.JumpAmount
 		}
-	/* case tcell.MouseWheelUp:
-		if len(s.dir) > 0 {
-			s.dt[s.cd].active--
-		}
-	case tcell.MouseWheelDown:
-		if len(s.dir) > 0 {
-			s.dt[s.cd].active++
-		}
-	case tcell.MouseLeft:
-		s.dt[s.cd].active = ev.MouseY - 1 */
 	case tcell.KeyEsc:
 		s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}
@@ -220,6 +212,7 @@ func (s *fmState) parseCommmandMode(ev *tcell.EventKey) {
 		s.cmd = s.cmd[:s.cmdIndex] + string(ev.Rune()) + s.cmd[s.cmdIndex:]
 		s.cmdIndex++
 	}
+	log.Verbose("parseCommmandMode done")
 }
 
 func (s *fmState) RunLetterCommand() {
@@ -252,6 +245,7 @@ func (s *fmState) RunFullCommand() {
 	if s.cmd[1] == '!' {
 		cmd := strings.Split(args[0], "!")
 		runThis(cmd[1], args[1:]...)
+		readDir(s.cd)
 		draw(s)
 	} else {
 		cmd := args[0][1:]

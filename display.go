@@ -26,6 +26,10 @@ const (
 )
 
 func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, offset, width int) {
+	tbw, tbh := scr.Size()
+	if tbw <= 0 || tbh <= 0 {
+		return
+	}
 	_, tbheight := scr.Size()
 	viewbox := tbheight - 2
 	oob := 0
@@ -80,7 +84,6 @@ func drawDir(active int, count int, selected map[string]bool, dir []pseudofile, 
 		}
 		s := getColors(f, a, selected[f.fullPath])
 
-		// puts(offset, i+topOffset, width, str, true, fg, bg)
 		puts(offset, i+topOffset, width, str, true, s)
 	}
 }
@@ -268,6 +271,7 @@ func draw(s *fmState) {
 	if tbw <= 0 || tbh <= 0 {
 		return
 	}
+
 	files, amtFiles, err := readDir(".")
 	if err != nil {
 		log.Errorln(err)
@@ -299,8 +303,7 @@ func draw(s *fmState) {
 
 	// draw footer for frame
 	s.drawFooter(files)
-	scr.Show()
-	// render()
+	render()
 }
 
 func setupDisplay() {
@@ -320,13 +323,13 @@ func setupDisplay() {
 	scr.SetStyle(tcell.StyleDefault.
 		Foreground(tcell.ColorDefault).
 		Background(tcell.ColorDefault))
-	scr.EnableMouse()
+	// scr.EnableMouse()
 	scr.Clear()
 }
 
 func render() {
-	// scr.Flush()
-	scr.Clear()
+	scr.Sync()
+	scr.Show()
 }
 
 func puts(x, y, maxWidth int, s string, wrap bool, style tcell.Style) {
