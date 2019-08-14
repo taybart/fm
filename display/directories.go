@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/fs"
+	"github.com/taybart/log"
 )
 
 // DrawDir render directory
@@ -89,39 +90,7 @@ func drawParentDir(dir fs.Directory) {
 
 func drawChildDir(dir fs.Directory, offset, width int) {
 	drawDir(dir, offset, width)
-	/* tbwidth, tbheight := scr.Size()
-	cr := conf.ColumnRatios
-	cw := conf.ColumnWidth
-	if cw < 0 {
-		cw = tbwidth
-	}
-	offset := int(float64(cr[0])/10.0*float64(cw)) +
-		int(float64(cr[1])/10.0*float64(cw))
-	width := int(float64(cr[2]) / 10.0 * float64(cw))
-	// Draw child directory or preview file < 100KB in last column
-	if w.Parent..isDir {
-		childPath := s.cd + "/" + parent.name
-		if s.cd == "/" {
-			childPath = s.cd + parent.name
-		}
-		files, c, err := readDir(childPath)
-
-		if !os.IsPermission(err) {
-			if files[0].isReal {
-				*count = c
-			}
-			if _, ok := s.dt[childPath]; !ok {
-				s.dt[childPath] = &dir{active: 0}
-			}
-
-			// @TODO temp
-			selectedFiles := make(map[string]bool)
-			for f := range s.selectedFiles {
-				selectedFiles[f] = true
-			}
-			drawDir(s.dt[childPath].active, 0, selectedFiles, files, offset, width)
-		}
-	} else if parent.isLink && parent.link.location != "" && !parent.link.broken {
+	/*} else if parent.isLink && parent.link.location != "" && !parent.link.broken {
 		if f, err := os.Stat(parent.link.location); f.IsDir() && err == nil {
 			childP := parent.link.location
 			files, c, err := readDir(childP)
@@ -175,6 +144,7 @@ func getColors(f fs.Pseudofile, active, selected bool) tcell.Style {
 			s = s.Foreground(colorExec).Bold(true)
 		} else if f.IsLink && f.Link.Location != "" {
 			if cf, err := os.Stat(f.Link.Location); err == nil && cf.IsDir() {
+				log.Info("good symlink", f.Name)
 				s = s.Foreground(colorSymlinkGood).Bold(true)
 			}
 			if f.Link.Broken {

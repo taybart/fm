@@ -28,7 +28,7 @@ func IsDir(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return fileInfo.IsDir(), err
+	return fileInfo.IsDir(), nil
 }
 
 // FileExists check if file is real

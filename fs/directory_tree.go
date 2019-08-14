@@ -7,27 +7,29 @@ import (
 	"strings"
 )
 
+// Tree holds multiple directories
+type Tree map[string]*Directory
+
 var conf *config.Config
 
 // Init initalize
-func Init(c *config.Config, cd string) (dt Tree, err error) {
+func Init(c *config.Config, cd string) (dt *Tree, err error) {
 	conf = c
 
-	dt = Tree{}
-	dt[cd], err = NewDir(cd)
+	dt = &Tree{}
+	(*dt)[cd], err = NewDir(cd)
 	if err != nil {
 		return
 	}
 	parent := GetParentPath(cd)
-	dt[parent], err = NewParentDir(cd)
+	(*dt)[parent], err = NewParentDir(cd)
 	if err != nil {
 		return
 	}
 
-	child := cd + "/" + dt[cd].ActiveFile.Name
-
+	child := (*dt)[cd].ActiveFile.FullPath
 	if ok, staterr := IsDir(child); ok && staterr == nil {
-		dt[child], err = NewDir(child)
+		(*dt)[child], err = NewDir(child)
 		if err != nil {
 			return
 		}
@@ -35,47 +37,88 @@ func Init(c *config.Config, cd string) (dt Tree, err error) {
 	return
 }
 
-// CD change directory
+// SelectFile change active file
+func (dt *Tree) SelectFile(direction int, cd string) (err error) {
+	if selected := (*dt)[cd].SelectFile(direction); selected {
+		err := dt.ReadChild(cd)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return
+}
+
+// ChangeDirectory cd
+func (dt *Tree) ChangeDirectory(dirname string) (err error) {
+	if ok, staterr := IsDir(dirname); !ok || staterr != nil {
+		err = errors.New("Not a directory")
+		return
+	}
+	parent := GetParentPath(dirname)
+	// log.Debug("parent", parent)
+
+	if _, exists := (*dt)[parent]; !exists && parent != "" {
+		(*dt)[parent], err = NewParentDir(dirname)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+	}
+
+	log.Verbose("Changing to", dirname)
+	if _, exists := (*dt)[dirname]; !exists {
+		log.Debug(dirname, "Does not exist")
+		(*dt)[dirname], err = NewDir(dirname)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+	}
+
+	child := (*dt)[dirname].ActiveFile.FullPath
+	if ok, staterr := IsDir(child); ok || staterr != nil {
+		if _, exists := (*dt)[child]; !exists {
+			log.Debug(child, "Does not exist")
+			(*dt)[child], err = NewDir(child)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+		}
+	}
+	return
+}
+
+// Update sync directory
+func (dt *Tree) Update(cd string) (err error) {
+	aName := (*dt)[cd].ActiveFile.Name
+	dir, err := NewDir(cd)
+	if err != nil {
+		return
+	}
+
+	dir.SelectFileByName(aName)
+	(*dt)[cd] = dir
+	return
+}
+
+// ReadChild change directory
 func (dt *Tree) ReadChild(cd string) (err error) {
 	child := (*dt)[cd].ActiveFile.FullPath
+
+	if _, exists := (*dt)[child]; exists {
+		return
+	}
+
 	if ok, staterr := IsDir(child); ok && staterr == nil {
 		var ch *Directory
 		ch, err = NewDir(child)
 		if err != nil {
 			return
 		}
-		log.Info(*ch)
 		(*dt)[child] = ch
 	}
 	return nil
-}
-
-// Tree holds multiple directories
-type Tree map[string]*Directory
-
-// NewParentDir get parent dir and select itself
-func NewParentDir(cd string) (dir *Directory, err error) {
-	parent := GetParentPath(cd)
-	dir, err = NewDir(parent)
-	if err != nil {
-		return
-	}
-	pn, err := getParentName(cd)
-	if err != nil {
-		return
-	}
-	a := 0
-	var af Pseudofile
-	for i, f := range dir.Files {
-		if f.Name == pn {
-			a = i
-			af = f
-			break
-		}
-	}
-	dir.Active = a
-	dir.ActiveFile = af
-	return
 }
 
 // GetParentPath dwisott

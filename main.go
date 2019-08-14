@@ -3,13 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	// "time"
-	// "reflect"
 
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/config"
 	"github.com/taybart/fm/display"
 	"github.com/taybart/fm/fs"
+	"github.com/taybart/fm/handlers"
 	"github.com/taybart/log"
 )
 
@@ -37,31 +36,29 @@ func main() {
 	display.Init(conf)
 	defer display.Close()
 
-	parent := fs.GetParentPath(cd)
-	for {
-		w := display.Window{Parent: *dt[parent], Current: *dt[cd]}
-		if _, ok := dt[(dt)[cd].ActiveFile.FullPath]; ok {
-			log.Info(dt[cd].ActiveFile.FullPath)
-			w.Child = *dt[((dt)[cd]).ActiveFile.FullPath]
-		}
-		display.Draw(w) //, Child: *dt[cd+dt[cd].ActiveFile.FullPath]})
-		event := display.PollEvents()
-		switch ev := event.(type) {
-		case *tcell.EventKey:
-			if ev.Rune() == 'q' {
-				display.Close()
-				os.Exit(0)
+	quit := make(chan bool)
+	handlers.Init(conf, quit)
+
+	go func() {
+		for {
+			parent := fs.GetParentPath(cd)
+			w := display.Window{Current: *(*dt)[cd]}
+			if parentDir, ok := (*dt)[parent]; ok && parent != "" {
+				w.Parent = *parentDir
 			}
-			if ev.Rune() == 'j' {
-				dt[cd].Active++
-				dt[cd].ActiveFile = dt[cd].Files[dt[cd].Active]
-				err := dt.CD(cd)
-				if err != nil {
-					log.Fatal(err)
-				}
+			if childDir, ok := (*dt)[(*dt)[cd].ActiveFile.FullPath]; ok {
+				w.Child = *childDir
+			}
+			display.Draw(w)
+			event := display.PollEvents()
+			switch ev := event.(type) {
+			case *tcell.EventKey:
+				cd = handlers.Keys(ev, dt, cd)
 			}
 		}
-	}
+	}()
+	<-quit
+	display.Close()
 }
 
 func pwd() string {

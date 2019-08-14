@@ -30,7 +30,7 @@ var a = struct {
 
 var deletedFiles = []string{}
 
-func HandleKeyEvent(s *fm, ev *tcell.EventKey) {
+func HandleKeyEvent(ev *tcell.EventKey) {
 	switch s.mode {
 	case single:
 		s.cmd = string(ev.Rune())
