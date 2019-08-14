@@ -1,4 +1,0 @@
-#!/bin/bash
-USER=$(ls -ld $1 | awk '{print $3}')
-GROUP=$(ls -ld $1 | awk '{print $4}')
-echo $USER $GROUP

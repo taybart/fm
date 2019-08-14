@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"encoding/json"
@@ -6,7 +6,8 @@ import (
 	"os"
 )
 
-type config struct {
+// Config uration
+type Config struct {
 	ShowHidden   bool   `json:"showHidden"`
 	WrapText     bool   `json:"wrapText"`
 	ColumnWidth  int    `json:"columnWidth"`
@@ -16,23 +17,24 @@ type config struct {
 	Folder       string `json:"folder"`
 }
 
-func loadConfig(name string) (config, error) {
+// Load configuration file
+func Load(name string) (c *Config, err error) {
 	home := os.Getenv("HOME")
-	if _, err := os.Stat(home + "/.config/fm"); os.IsNotExist(err) {
-		err := os.MkdirAll(home+"/.config/fm", os.ModePerm)
+	if _, err = os.Stat(home + "/.config/fm"); os.IsNotExist(err) {
+		err = os.MkdirAll(home+"/.config/fm", os.ModePerm)
 		if err != nil {
-			return config{}, err
+			return
 		}
 	}
 	j, err := os.OpenFile(name, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
-		return config{}, err
+		return
 	}
 
 	defer j.Close()
 
 	// Default Config
-	c := config{
+	c = &Config{
 		ShowHidden:   false,
 		WrapText:     true,
 		ColumnWidth:  -1,
@@ -44,8 +46,8 @@ func loadConfig(name string) (config, error) {
 
 	jb, err := ioutil.ReadAll(j)
 	if err != nil {
-		return config{}, err
+		return
 	}
 	json.Unmarshal(jb, &c)
-	return c, nil
+	return
 }

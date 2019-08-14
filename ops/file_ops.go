@@ -1,4 +1,4 @@
-package main
+package ops
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (s *fmState) getConfirmation(action string) {
+func getConfirmation(f *fm, action string) {
 	s.cmd = "Confirm " + action + " [Yy]: "
 	s.mode = confirm
 }
