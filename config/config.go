@@ -48,6 +48,9 @@ func Load(name string) (c *Config, err error) {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(jb, &c)
+	err = json.Unmarshal(jb, &c)
+	if err != nil {
+		return
+	}
 	return
 }

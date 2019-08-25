@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	// "fmt"
-
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/config"
 	"github.com/taybart/fm/fs"
@@ -21,7 +19,7 @@ var state int
 const (
 	normal = iota + 1
 	command
-	run
+	// run
 )
 
 // Init the handlers
@@ -85,9 +83,15 @@ func keys(k tcell.Key, dt *fs.Tree, current string) string {
 	cd := current
 	switch k {
 	case tcell.KeyCtrlJ:
-		dt.SelectFile(conf.JumpAmount, cd)
+		err := dt.SelectFile(conf.JumpAmount, cd)
+		if err != nil {
+			log.Error(err)
+		}
 	case tcell.KeyCtrlK:
-		dt.SelectFile(-1*conf.JumpAmount, cd)
+		err := dt.SelectFile(-1*conf.JumpAmount, cd)
+		if err != nil {
+			log.Error(err)
+		}
 	case tcell.KeyEsc:
 		// s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}

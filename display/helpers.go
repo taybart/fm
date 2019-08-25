@@ -26,9 +26,9 @@ func puts(x, y, maxWidth int, s string, wrap bool, style tcell.Style) {
 	}
 }
 
-func printPrompt(s string) {
+/* func printPrompt(s string) {
 	tbwidth, tbheight := scr.Size()
 	puts(tbwidth/4, tbheight/2, tbwidth,
 		s, true, tcell.StyleDefault)
 	scr.Show()
-}
+} */
