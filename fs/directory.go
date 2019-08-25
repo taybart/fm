@@ -114,11 +114,15 @@ func (d *Directory) SelectFile(direction int) bool {
 	if len(d.Files) > 0 {
 		index := d.Active
 		index += direction
-		if index < len(d.Files) && index >= 0 {
-			d.Active += direction
-			d.ActiveFile = d.Files[d.Active]
-			return true
+		if index >= len(d.Files) {
+			index = len(d.Files) - 1
 		}
+		if index <= 0 {
+			index = 0
+		}
+		d.Active = index
+		d.ActiveFile = d.Files[d.Active]
+		return true
 	}
 	return false
 }

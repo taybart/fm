@@ -1,3 +1,4 @@
+github.com/DATA-DOG/go-sqlmock v1.3.3 h1:CWUqKXe0s8A2z6qCgkP4Kru7wC11YoAnoupUKFDnH08=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/gdamore/encoding v1.0.0 h1:+7OoQ1Bc6eTm5niUzBa0Ctsh6JbMW6Ra+YNuAtDBdko=
 github.com/gdamore/encoding v1.0.0/go.mod h1:alR0ol34c49FCSBLjhosxzcPHQbf2trDkoo5dl+VrEg=
@@ -7,16 +8,8 @@ github.com/lucasb-eyer/go-colorful v1.0.2 h1:mCMFu6PgSozg9tDNMMK3g18oJBX7oYGrC09
 github.com/lucasb-eyer/go-colorful v1.0.2/go.mod h1:0MS4r+7BZKSJ5mw4/S5MPN+qHFF1fYclkSPilDOKW0s=
 github.com/mattn/go-runewidth v0.0.4 h1:2BvfKmzob6Bmd4YsL0zygOqfdFnK7GR4QL06Do4/p7Y=
 github.com/mattn/go-runewidth v0.0.4/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
-github.com/nsf/termbox-go v0.0.0-20190104133558-0938b5187e61 h1:pEzZYac/uQ4cgaN1Q/UYZg+ZtCSWz2HQ3rvl8MeN9MA=
-github.com/nsf/termbox-go v0.0.0-20190104133558-0938b5187e61/go.mod h1:IuKpRQcYE1Tfu+oAQqaLisqDeXgjyyltCfsaoYN18NQ=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
-github.com/taybart/log v0.0.0-20181212204646-0cc423998b4d h1:2Cc2x5OAQh3bmkNRs3xOp43kNy3CvGlSDlTJeEGa56A=
-github.com/taybart/log v0.0.0-20181212204646-0cc423998b4d/go.mod h1:bCgtL+Wtq1ZRchiS8HS2El2S44c13N3WsjckA+I8wqU=
-github.com/taybart/log v0.0.0-20190227221442-9463c94ca772 h1:8Q8q1jAKcGjMTrOb0rPM/Wmy6k1atV7lHoUTMyUCAEk=
-github.com/taybart/log v0.0.0-20190227221442-9463c94ca772/go.mod h1:bCgtL+Wtq1ZRchiS8HS2El2S44c13N3WsjckA+I8wqU=
-github.com/taybart/log v1.0.1 h1:6TWXSIxlx2ptB7RH81sYnrnNww6zp2er4vKaGMTa7I0=
-github.com/taybart/log v1.0.1/go.mod h1:bCgtL+Wtq1ZRchiS8HS2El2S44c13N3WsjckA+I8wqU=
 github.com/taybart/log v1.0.2 h1:+ZEgKEtnSlJ9P3ueHx8+lpXAjCDQ2aM9tyIYBRILCTY=
 github.com/taybart/log v1.0.2/go.mod h1:bCgtL+Wtq1ZRchiS8HS2El2S44c13N3WsjckA+I8wqU=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=

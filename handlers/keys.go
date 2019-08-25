@@ -13,10 +13,22 @@ var conf *config.Config
 
 var end chan bool
 
+var input string
+
+// State that the handlers are in
+var state int
+
+const (
+	normal = iota + 1
+	command
+	run
+)
+
 // Init the handlers
 func Init(c *config.Config, done chan bool) {
 	conf = c
 	end = done
+	state = normal
 }
 
 // Close end
@@ -27,6 +39,7 @@ func Close() {
 // Keys handler
 func Keys(ev *tcell.EventKey, dt *fs.Tree, cd string) string {
 	cd = runes(ev.Rune(), dt, cd)
+	cd = keys(ev.Key(), dt, cd)
 	return cd
 }
 
@@ -56,8 +69,27 @@ func runes(r rune, dt *fs.Tree, current string) string {
 		dt.SelectFile(1, cd)
 	case 'k':
 		dt.SelectFile(-1, cd)
+	case ':':
+		input = ""
+		state = command
+	// case ' ':
+	// dt.
 	case 'q':
 		Close()
+	}
+	return cd
+}
+
+// runes handler
+func keys(k tcell.Key, dt *fs.Tree, current string) string {
+	cd := current
+	switch k {
+	case tcell.KeyCtrlJ:
+		dt.SelectFile(conf.JumpAmount, cd)
+	case tcell.KeyCtrlK:
+		dt.SelectFile(-1*conf.JumpAmount, cd)
+	case tcell.KeyEsc:
+		// s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}
 	return cd
 }
@@ -65,49 +97,6 @@ func runes(r rune, dt *fs.Tree, current string) string {
 /* func parseNormalMode(ev *tcell.EventKey, dt fs.Tree, cd string) {
 	switch ev.Rune() {
 	[>Movement<]
-	case 'h':
-		if cd != "/" {
-			if len(navtree) > 0 {
-				dn := navtree[len(navtree)-1]
-				navtree = navtree[:len(navtree)-1]
-				os.Chdir(dn)
-			} else {
-				os.Chdir("../")
-			}
-		}
-	case 'l':
-		if len(s.dir) == 0 {
-			break
-		}
-
-		dn := ""
-		if s.active.isDir {
-			dn = s.cd + "/" + s.active.name
-		}
-		if s.active.isLink && !s.active.link.broken {
-			if f, err := os.Stat(s.active.link.location); f.IsDir() && err == nil {
-				dn = s.active.link.location
-			}
-		}
-		// if a new directory name exists go there
-		if dn != "" {
-			if s.cd == "/" {
-				dn = s.cd + s.active.name
-			}
-			if _, ok := s.dt[dn]; !ok {
-				s.dt[dn] = &dir{active: 0}
-			}
-			navtree = append(navtree, s.cd)
-			os.Chdir(dn)
-		}
-	case 'j':
-		if len(s.dir) > 0 {
-			s.dt[s.cd].active++
-		}
-	case 'k':
-		if len(s.dir) > 0 {
-			s.dt[s.cd].active--
-		}
 		[>Special<]
 	case 'd':
 		switch s.lastInput {
