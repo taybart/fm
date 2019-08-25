@@ -64,9 +64,15 @@ func runes(r rune, dt *fs.Tree, current string) string {
 			log.Error(err)
 		}
 	case 'j':
-		dt.SelectFile(1, cd)
+		err := dt.SelectFile(1, cd)
+		if err != nil {
+			log.Error(err)
+		}
 	case 'k':
-		dt.SelectFile(-1, cd)
+		err := dt.SelectFile(-1, cd)
+		if err != nil {
+			log.Error(err)
+		}
 	case ':':
 		input = ""
 		state = command
