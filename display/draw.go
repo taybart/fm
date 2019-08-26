@@ -140,15 +140,15 @@ func drawFooter(w Window) {
 		}
 		style := tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite)
 		scr.SetCell(w.Cmd.Index+1, tbheight-1, style, c)
-		// } else {
-		/* f := files[s.dt[s.cd].active]
-		if f.isReal {
+	} else {
+		f := w.Current.ActiveFile
+		if f.IsReal {
 			s := fmt.Sprintf("%s %d %s %s",
-				f.f.Mode(), f.f.Size(),
-				f.f.ModTime().Format("Jan 2 15:04"), f.name)
+				f.F.Mode(), f.F.Size(),
+				f.F.ModTime().Format("Jan 2 15:04"), f.Name)
 			puts(0, tbheight-1, tbwidth,
 				s, true, tcell.StyleDefault)
-		} */
+		}
 	}
 }
 

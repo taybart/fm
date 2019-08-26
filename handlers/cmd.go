@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/fs"
-	"github.com/taybart/log"
 )
 
 // Command : holds command input
@@ -48,7 +47,7 @@ func (c *Command) UpdateIndex(dir int) {
 
 // cmd rune handler
 func cmdRune(r rune, dt *fs.Tree, current string) {
-	log.Verbose(r)
+	// log.Verbose(r)
 	if r != 127 && r != 0 {
 		cmd.Add(r)
 	}
