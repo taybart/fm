@@ -1,10 +1,11 @@
 package fs
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/taybart/fm/config"
 	"github.com/taybart/log"
-	"strings"
 )
 
 // Tree holds multiple directories
@@ -67,7 +68,7 @@ func (dt *Tree) ChangeDirectory(dirname string) (err error) {
 
 	log.Verbose("Changing to", dirname)
 	if _, exists := (*dt)[dirname]; !exists {
-		log.Debug(dirname, "Does not exist")
+		log.Debug(dirname, "Does not exist adding")
 		(*dt)[dirname], err = NewDir(dirname)
 		if err != nil {
 			log.Error(err)
@@ -78,7 +79,7 @@ func (dt *Tree) ChangeDirectory(dirname string) (err error) {
 	child := (*dt)[dirname].ActiveFile.FullPath
 	if ok, staterr := IsDir(child); ok || staterr != nil {
 		if _, exists := (*dt)[child]; !exists {
-			log.Debug(child, "Does not exist")
+			log.Debug(child, "Does not exist adding child")
 			(*dt)[child], err = NewDir(child)
 			if err != nil {
 				log.Error(err)

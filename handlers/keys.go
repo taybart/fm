@@ -23,7 +23,7 @@ var state int
 const (
 	normal = iota + 1
 	command
-	run
+	single
 )
 
 // Init the handlers
@@ -36,6 +36,7 @@ func Init(c *config.Config, done chan bool) {
 
 // Close end
 func Close() {
+	takeOutTrash()
 	end <- true
 }
 
@@ -43,11 +44,13 @@ func Close() {
 func Keys(ev *tcell.EventKey, dt *fs.Tree, cd string) HandlerReturn {
 	switch state {
 	case normal:
-		cd = runes(ev.Rune(), dt, cd)
 		cd = keys(ev.Key(), dt, cd)
+		cd = runes(ev.Rune(), dt, cd)
 	case command:
-		cmdRune(ev.Rune(), dt, cd)
 		cmdKeys(ev.Key(), dt, cd)
+		cmdRune(ev.Rune(), dt, cd)
+	case single:
+		singleBuilder(ev.Rune(), dt, cd)
 	}
 	return HandlerReturn{CD: cd, Cmd: cmd}
 }
@@ -66,7 +69,6 @@ func runes(r rune, dt *fs.Tree, current string) string {
 			cd = current
 		}
 	case 'l':
-		// down cd activefile
 		child := (*dt)[cd].ActiveFile.FullPath
 		err := dt.ChangeDirectory(child)
 		cd = child
@@ -88,10 +90,10 @@ func runes(r rune, dt *fs.Tree, current string) string {
 		cmd.Reset()
 		cmd.Active = true
 		state = command
-	// case ' ':
-	// dt.
 	case 'q':
 		Close()
+	default:
+		cd = singleBuilder(r, dt, cd)
 	}
 	return cd
 }
@@ -111,75 +113,9 @@ func keys(k tcell.Key, dt *fs.Tree, current string) string {
 			log.Error(err)
 		}
 	case tcell.KeyEsc:
+		cmd.Reset()
+		state = normal
 		// s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}
 	return cd
 }
-
-/* func parseNormalMode(ev *tcell.EventKey, dt fs.Tree, cd string) {
-	switch ev.Rune() {
-	[>Movement<]
-		[>Special<]
-	case 'd':
-		switch s.lastInput {
-		case 'c':
-			s.mode = command
-			s.cmd = ":cd "
-		case 'd':
-			copyFile(s)
-			s.moveFile = true
-		}
-	case 'y':
-		// yy
-		if s.lastInput == 'y' {
-			copyFile(s)
-		}
-	case 'p':
-		// pp
-		if s.lastInput == 'p' {
-			if s.moveFile {
-				moveFile(s)
-				s.moveFile = false
-			} else {
-				pasteFile(s)
-			}
-		}
-	case 'i':
-		inspectFile(s.active)
-	case 'e', 'z':
-		s.mode = single
-	case ':':
-		s.cmd = ":"
-		s.cmdIndex = 1
-		s.mode = command
-	case 's':
-		s.cmd = ":!"
-		s.cmdIndex = 2
-		s.mode = command
-	case 'S':
-		newShell()
-	case '/':
-		fuzzyFind(s)
-	case 'q':
-		finalize()
-	case ' ':
-		if _, exist := s.selectedFiles[s.active.fullPath]; !exist {
-			s.selectedFiles[s.active.fullPath] = s.active
-		} else {
-			delete(s.selectedFiles, s.active.fullPath)
-		}
-		s.dt[s.cd].active++
-	}
-	switch ev.Key() {
-	case tcell.KeyCtrlJ:
-		if len(s.dir) > 0 && (s.dt[s.cd].active < len(s.dir)-1) {
-			s.dt[s.cd].active += conf.JumpAmount
-		}
-	case tcell.KeyCtrlK:
-		if len(s.dir) > 0 {
-			s.dt[s.cd].active -= conf.JumpAmount
-		}
-	case tcell.KeyEsc:
-		s.selectedFiles = make(map[string]pseudofile) // clear selected files
-	}
-} */

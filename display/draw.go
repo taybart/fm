@@ -8,15 +8,21 @@ import (
 	"github.com/gdamore/tcell/encoding"
 	"github.com/taybart/fm/config"
 	"github.com/taybart/fm/fs"
-	"github.com/taybart/fm/handlers"
 	"github.com/taybart/log"
 )
 
 var conf *config.Config
 
+// Command : cmd
+type Command struct {
+	Index  int
+	Input  string
+	Active bool
+}
+
 // Window holds just a window
 type Window struct {
-	Cmd     handlers.Command
+	Cmd     Command
 	Parent  fs.Directory
 	Current fs.Directory
 	Child   fs.Directory
@@ -95,8 +101,19 @@ func Draw(w Window) {
 	drawHeader(w.Current)
 	drawFooter(w)
 
+	// scr.Sync()
 	scr.Show()
-	scr.Sync()
+}
+
+// Prompt user
+func Prompt(p string) {
+	tbwidth, tbheight := scr.Size()
+	// scr.Clear()
+	for i := 0; i < tbwidth-len(p); i++ {
+		p += " "
+	}
+	puts(0, tbheight-1, tbwidth, p, true, tcell.StyleDefault)
+	scr.Show()
 }
 
 func drawHeader(dir fs.Directory) {
@@ -130,29 +147,28 @@ func drawHeader(dir fs.Directory) {
 func drawFooter(w Window) {
 	tbwidth, tbheight := scr.Size()
 	if w.Cmd.Active {
-		puts(0, tbheight-1, tbwidth,
-			":", true, tcell.StyleDefault)
-		puts(1, tbheight-1, tbwidth,
-			w.Cmd.Input, true, tcell.StyleDefault)
+		scr.SetContent(0, tbheight-1, ':', nil, tcell.StyleDefault)
+		puts(1, tbheight-1, tbwidth, w.Cmd.Input, true, tcell.StyleDefault)
+
 		c := ' '
 		if w.Cmd.Index < len(w.Cmd.Input) {
 			c = rune(w.Cmd.Input[w.Cmd.Index])
 		}
+
 		style := tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite)
-		scr.SetCell(w.Cmd.Index+1, tbheight-1, style, c)
+		scr.SetContent(w.Cmd.Index+1, tbheight-1, c, nil, style)
 	} else {
 		f := w.Current.ActiveFile
 		if f.IsReal {
 			s := fmt.Sprintf("%s %d %s %s",
 				f.F.Mode(), f.F.Size(),
 				f.F.ModTime().Format("Jan 2 15:04"), f.Name)
-			puts(0, tbheight-1, tbwidth,
-				s, true, tcell.StyleDefault)
+			puts(0, tbheight-1, tbwidth, s, true, tcell.StyleDefault)
 		}
 	}
 }
 
-// PollEvents get tcell events
+// PollEvents get tcell events allows scr to not be exported
 func PollEvents() tcell.Event {
 	return scr.PollEvent()
 }

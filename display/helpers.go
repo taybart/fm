@@ -13,7 +13,7 @@ func puts(x, y, maxWidth int, s string, wrap bool, style tcell.Style) {
 		} else if c == '\r' {
 			x = xstart
 		} else {
-			scr.SetCell(x, y, style, c)
+			scr.SetContent(x, y, c, nil, style)
 			x++
 			if x > xstart+maxWidth {
 				if !wrap {

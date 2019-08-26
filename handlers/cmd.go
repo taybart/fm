@@ -1,8 +1,12 @@
 package handlers
 
 import (
+	"regexp"
+
 	"github.com/gdamore/tcell"
+	"github.com/taybart/fm/display"
 	"github.com/taybart/fm/fs"
+	"github.com/taybart/log"
 )
 
 // Command : holds command input
@@ -14,21 +18,41 @@ type Command struct {
 
 var cmd Command
 
-// Reset : reset command
+var trailing rune
+var runCommands []string
+
+// Reset : command
 func (c *Command) Reset() {
 	c.Input = ""
 	c.Index = 0
+	c.Active = false
+}
+
+// Set : command
+func (c *Command) Set(input string) {
+	c.Input = input
+	c.Index = len(input)
+	c.Active = true
 }
 
 // Add : add rune to command
 func (c *Command) Add(r rune) {
-	cmd.Input += string(r)
+	c.Input = c.Input[:c.Index] + string(r) + c.Input[c.Index:]
 	c.UpdateIndex(1)
 }
 
 // Del : add rune to command
 func (c *Command) Del() {
-	c.Input = c.Input[:c.Index-1] + c.Input[c.Index:]
+	if len(c.Input) == 0 {
+		c.Reset()
+		state = normal
+		return
+	}
+	if c.Index >= len(c.Input) {
+		c.Input = c.Input[:c.Index-1]
+	} else {
+		c.Input = c.Input[:c.Index-1] + c.Input[c.Index:]
+	}
 	c.UpdateIndex(-1)
 }
 
@@ -37,24 +61,59 @@ func (c *Command) UpdateIndex(dir int) {
 	index := c.Index
 	index += dir
 	if index >= len(c.Input) {
-		index = len(c.Input) - 1
+		index = len(c.Input)
 	}
-	if index <= 0 {
+	if index < 0 {
 		index = 0
 	}
-	cmd.Index = index
+	c.Index = index
+}
+
+// Run : command
+func (c *Command) Run(dt *fs.Tree, cd string) {
+	isShell := regexp.MustCompile(`^\!`)
+	switch {
+	case isShell.MatchString(c.Input):
+		log.Info("command")
+	}
+	switch c.Input {
+	case "delete":
+		deletef(dt, cd)
+	case "yank", "cut":
+		yank(dt, cd)
+	case "paste":
+		paste(dt, cd)
+	case "q", "quit":
+		Close()
+	}
+	runCommands = append(runCommands, c.Input)
+	c.Reset()
+	state = normal
+}
+
+func prompt(p string) string {
+	display.Prompt(p)
+	event := display.PollEvents()
+	switch ev := event.(type) {
+	case *tcell.EventKey:
+		return string(ev.Rune())
+	}
+	return ""
 }
 
 // cmd rune handler
 func cmdRune(r rune, dt *fs.Tree, current string) {
-	// log.Verbose(r)
-	if r != 127 && r != 0 {
-		cmd.Add(r)
+	switch r {
+	default:
+		valid := regexp.MustCompile(`[^[:cntrl:]]`)
+		if valid.Match([]byte(string(r))) {
+			cmd.Add(r)
+		}
 	}
 }
 
 // cmd key handler
-func cmdKeys(k tcell.Key, dt *fs.Tree, current string) {
+func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) {
 	switch k {
 	case tcell.KeyRight:
 		cmd.UpdateIndex(1)
@@ -63,13 +122,9 @@ func cmdKeys(k tcell.Key, dt *fs.Tree, current string) {
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		cmd.Del()
 	case tcell.KeyEnter:
-		state = run
-		state = normal
-		cmd.Active = false
+		cmd.Run(dt, cd)
 	case tcell.KeyEsc:
 		cmd.Reset()
-		state = run
 		state = normal
-		cmd.Active = false
 	}
 }

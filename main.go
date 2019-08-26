@@ -43,7 +43,7 @@ func main() {
 	go func() {
 		for {
 			parent := fs.GetParentPath(cd)
-			w := display.Window{Current: *(*dt)[cd], Cmd: cmd}
+			w := display.Window{Current: *(*dt)[cd], Cmd: display.Command(cmd)}
 			if parentDir, ok := (*dt)[parent]; ok && parent != "" {
 				w.Parent = *parentDir
 			}
