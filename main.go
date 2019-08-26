@@ -78,7 +78,11 @@ func setupLog() {
 	log.UseColors(false)
 	log.SetTimeFmt("2006-01-02 15:04:05.9999")
 	conf, err = config.Load(home + "/.config/fm/config.json")
-	log.SetOutput(conf.Folder + "/fm.log")
+	if err != nil {
+		fmt.Println(err)
+		log.Fatal(err)
+	}
+	err = log.SetOutput(conf.Folder + "/fm.log")
 	if err != nil {
 		fmt.Println(err)
 		log.Fatal(err)
