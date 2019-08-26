@@ -89,38 +89,8 @@ func drawParentDir(dir fs.Directory) {
 }
 
 func drawChildDir(dir fs.Directory, offset, width int) {
+	// TODO file previews
 	drawDir(dir, offset, width)
-	/*} else if parent.isLink && parent.link.location != "" && !parent.link.broken {
-		if f, err := os.Stat(parent.link.location); f.IsDir() && err == nil {
-			childP := parent.link.location
-			files, c, err := readDir(childP)
-			if !os.IsPermission(err) && len(files) > 0 {
-				if files[0].isReal {
-					*count = c
-				}
-				if _, ok := s.dt[childP]; !ok {
-					s.dt[childP] = &dir{active: 0}
-				}
-				// @TODO temp
-				selectedFiles := make(map[string]bool)
-				for f := range s.selectedFiles {
-					selectedFiles[f] = true
-				}
-				drawDir(s.dt[childP].active, 0, selectedFiles, files, offset, width)
-			}
-		}
-	} else if parent.isReal &&
-		parent.f.Size() < 3*1024*1024 {
-
-		n := parent.name
-		cmd := exec.Command("strings", n)
-		buf, _ := cmd.Output()
-		if len(buf) > cw*tbheight-2 {
-			buf = buf[:cw*tbheight-2]
-		}
-		puts(offset, topOffset, width,
-			string(buf), conf.WrapText, tcell.StyleDefault)
-	} */
 }
 func getColors(f fs.Pseudofile, active, selected bool) tcell.Style {
 	s := tcell.StyleDefault

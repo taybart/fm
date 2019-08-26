@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/encoding"
 	"github.com/taybart/fm/config"
 	"github.com/taybart/fm/fs"
+	"github.com/taybart/fm/handlers"
 	"github.com/taybart/log"
 )
 
@@ -15,6 +16,7 @@ var conf *config.Config
 
 // Window holds just a window
 type Window struct {
+	Cmd     handlers.Command
 	Parent  fs.Directory
 	Current fs.Directory
 	Child   fs.Directory
@@ -91,7 +93,7 @@ func Draw(w Window) {
 	}
 
 	drawHeader(w.Current)
-	// drawFooter(files)
+	drawFooter(w)
 
 	scr.Show()
 	scr.Sync()
@@ -125,31 +127,32 @@ func drawHeader(dir fs.Directory) {
 		true, tcell.StyleDefault)
 }
 
-/* func drawFooter(files []pseudofile) {
+func drawFooter(w Window) {
 	tbwidth, tbheight := scr.Size()
-	if len(s.cmd) > 0 {
+	if w.Cmd.Active {
 		puts(0, tbheight-1, tbwidth,
-			s.cmd, true, tcell.StyleDefault)
+			":", true, tcell.StyleDefault)
+		puts(1, tbheight-1, tbwidth,
+			w.Cmd.Input, true, tcell.StyleDefault)
 		c := ' '
-		if s.cmdIndex < len(s.cmd) {
-			c = rune(s.cmd[s.cmdIndex])
+		if w.Cmd.Index < len(w.Cmd.Input) {
+			c = rune(w.Cmd.Input[w.Cmd.Index])
 		}
 		style := tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorWhite)
-		scr.SetCell(s.cmdIndex, tbheight-1, style, c)
-	} else {
-		f := files[s.dt[s.cd].active]
+		scr.SetCell(w.Cmd.Index+1, tbheight-1, style, c)
+		// } else {
+		/* f := files[s.dt[s.cd].active]
 		if f.isReal {
 			s := fmt.Sprintf("%s %d %s %s",
 				f.f.Mode(), f.f.Size(),
 				f.f.ModTime().Format("Jan 2 15:04"), f.name)
 			puts(0, tbheight-1, tbwidth,
 				s, true, tcell.StyleDefault)
-		}
+		} */
 	}
-} */
+}
 
 // PollEvents get tcell events
 func PollEvents() tcell.Event {
 	return scr.PollEvent()
-	// log.Verbose(reflect.TypeOf(event).String())
 }

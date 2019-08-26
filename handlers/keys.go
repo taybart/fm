@@ -7,11 +7,15 @@ import (
 	"github.com/taybart/log"
 )
 
+// HandlerReturn : at the end returns
+type HandlerReturn struct {
+	CD  string
+	Cmd Command
+}
+
 var conf *config.Config
 
 var end chan bool
-
-var input string
 
 // State that the handlers are in
 var state int
@@ -19,7 +23,7 @@ var state int
 const (
 	normal = iota + 1
 	command
-	// run
+	run
 )
 
 // Init the handlers
@@ -27,6 +31,7 @@ func Init(c *config.Config, done chan bool) {
 	conf = c
 	end = done
 	state = normal
+	cmd = Command{Input: "", Index: 0, Active: false}
 }
 
 // Close end
@@ -35,10 +40,16 @@ func Close() {
 }
 
 // Keys handler
-func Keys(ev *tcell.EventKey, dt *fs.Tree, cd string) string {
-	cd = runes(ev.Rune(), dt, cd)
-	cd = keys(ev.Key(), dt, cd)
-	return cd
+func Keys(ev *tcell.EventKey, dt *fs.Tree, cd string) HandlerReturn {
+	switch state {
+	case normal:
+		cd = runes(ev.Rune(), dt, cd)
+		cd = keys(ev.Key(), dt, cd)
+	case command:
+		cmdRune(ev.Rune(), dt, cd)
+		cmdKeys(ev.Key(), dt, cd)
+	}
+	return HandlerReturn{CD: cd, Cmd: cmd}
 }
 
 // runes handler
@@ -74,7 +85,8 @@ func runes(r rune, dt *fs.Tree, current string) string {
 			log.Error(err)
 		}
 	case ':':
-		input = ""
+		cmd.Reset()
+		cmd.Active = true
 		state = command
 	// case ' ':
 	// dt.

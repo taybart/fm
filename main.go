@@ -27,6 +27,7 @@ func main() {
 	setupLog()
 
 	cd := pwd()
+	cmd := handlers.Command{}
 	dt, err := fs.Init(conf, cd)
 	if err != nil {
 		fmt.Println(err)
@@ -42,7 +43,7 @@ func main() {
 	go func() {
 		for {
 			parent := fs.GetParentPath(cd)
-			w := display.Window{Current: *(*dt)[cd]}
+			w := display.Window{Current: *(*dt)[cd], Cmd: cmd}
 			if parentDir, ok := (*dt)[parent]; ok && parent != "" {
 				w.Parent = *parentDir
 			}
@@ -53,7 +54,9 @@ func main() {
 			event := display.PollEvents()
 			switch ev := event.(type) {
 			case *tcell.EventKey:
-				cd = handlers.Keys(ev, dt, cd)
+				hr := handlers.Keys(ev, dt, cd)
+				cd = hr.CD
+				cmd = hr.Cmd
 			}
 		}
 	}()

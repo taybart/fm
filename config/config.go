@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strings"
+
+	"github.com/taybart/log"
 )
 
 // Config uration
@@ -48,9 +51,12 @@ func Load(name string) (c *Config, err error) {
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(jb, &c)
-	if err != nil {
-		return
+	if strings.Contains(string(jb), "{") {
+		err = json.Unmarshal(jb, &c)
+		if err != nil {
+			log.Error("Config", jb)
+			return
+		}
 	}
 	return
 }
