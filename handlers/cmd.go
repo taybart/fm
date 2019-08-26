@@ -78,11 +78,20 @@ func (c *Command) Run(dt *fs.Tree, cd string) {
 	}
 	switch c.Input {
 	case "delete":
-		deletef(dt, cd)
+		err := deletef(dt, cd)
+		if err != nil {
+			log.Error("deletef", err)
+		}
 	case "yank", "cut":
-		yank(dt, cd)
+		err := yank(dt, cd)
+		if err != nil {
+			log.Error(c.Input, err)
+		}
 	case "paste":
-		paste(dt, cd)
+		err := paste(dt, cd)
+		if err != nil {
+			log.Error("paste", err)
+		}
 	case "q", "quit":
 		Close()
 	}

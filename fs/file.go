@@ -41,14 +41,23 @@ func (f *Pseudofile) Move(dt *Tree, directory string) {
 			dir.Files = append(dir.Files[:i], dir.Files[i:]...)
 		}
 	}
-	dt.Update(parent)
-	dt.Update(directory)
+	err := dt.Update(parent)
+	if err != nil {
+		log.Error("Updating parent in move", err)
+	}
+	err = dt.Update(directory)
+	if err != nil {
+		log.Error("Updating directory in move", err)
+	}
 }
 
 // Copy file to new location
 func (f *Pseudofile) Copy(dt *Tree, directory string) {
 	if f.IsDir {
-		copyDir(f.FullPath, path.Join(directory, f.Name))
+		err := copyDir(f.FullPath, path.Join(directory, f.Name))
+		if err != nil {
+			log.Error("copyDir", err)
+		}
 	} else {
 		name := path.Join(directory, f.Name)
 		if exists, err := FileExists(name); exists {
@@ -63,11 +72,20 @@ func (f *Pseudofile) Copy(dt *Tree, directory string) {
 			}
 		}
 		log.Info(f.FullPath, name)
-		copyFile(f.FullPath, name)
+		err := copyFile(f.FullPath, name)
+		if err != nil {
+			log.Error("copyFile", err)
+		}
 	}
 	parent := GetParentPath(f.FullPath)
-	dt.Update(parent)
+	err := dt.Update(parent)
+	if err != nil {
+		log.Error("Updating parent in copy", err)
+	}
 	dt.Update(directory)
+	if err != nil {
+		log.Error("Updating directory in copy", err)
+	}
 }
 
 // copyFile copies a single file from src to dst

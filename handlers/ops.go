@@ -87,14 +87,20 @@ func moveToTrash(fn string) {
 			log.Errorln(err)
 		}
 	}
-	os.Rename(fn, home+"/.tmp/fm_trash/"+path.Base(fn))
+	err := os.Rename(fn, home+"/.tmp/fm_trash/"+path.Base(fn))
+	if err != nil {
+		log.Errorln(err)
+	}
 	// deletedFiles = append(deletedFiles, fn)
 }
 
 func takeOutTrash() {
 	home, _ := os.LookupEnv("HOME")
 	os.RemoveAll(home + "/.tmp/fm_trash/")
-	os.MkdirAll(home+"/.tmp/fm_trash/", os.ModeDir|0755)
+	err := os.MkdirAll(home+"/.tmp/fm_trash/", os.ModeDir|0755)
+	if err != nil {
+		log.Errorln(err)
+	}
 }
 
 func runThis(toRun string, args ...string) error {
