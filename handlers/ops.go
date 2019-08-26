@@ -44,8 +44,7 @@ func deletef(dt *fs.Tree, cd string) error {
 		return nil
 	}
 	moveToTrash((*dt)[cd].ActiveFile.FullPath)
-	dt.Update(cd)
-	return nil
+	return dt.Update(cd)
 }
 
 func fuzzyFind(dir *fs.Directory) {

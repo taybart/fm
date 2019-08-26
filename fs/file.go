@@ -32,7 +32,11 @@ type Link struct {
 func (f *Pseudofile) Move(dt *Tree, directory string) {
 	// Move
 	log.Verbose("Moving", f.FullPath, path.Join(directory, f.Name))
-	os.Rename(f.FullPath, path.Join(directory, f.Name))
+	err := os.Rename(f.FullPath, path.Join(directory, f.Name))
+	if err != nil {
+		log.Error("Rename during move", err)
+		return
+	}
 	parent := GetParentPath(f.FullPath)
 	log.Verbose("base", parent)
 	for i, fi := range (*dt)[parent].Files {
@@ -41,7 +45,7 @@ func (f *Pseudofile) Move(dt *Tree, directory string) {
 			dir.Files = append(dir.Files[:i], dir.Files[i:]...)
 		}
 	}
-	err := dt.Update(parent)
+	err = dt.Update(parent)
 	if err != nil {
 		log.Error("Updating parent in move", err)
 	}
@@ -82,7 +86,7 @@ func (f *Pseudofile) Copy(dt *Tree, directory string) {
 	if err != nil {
 		log.Error("Updating parent in copy", err)
 	}
-	dt.Update(directory)
+	err = dt.Update(directory)
 	if err != nil {
 		log.Error("Updating directory in copy", err)
 	}
