@@ -112,12 +112,21 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 		}
 		if isdir {
 			(*dt)[cd].SelectFileByName(selection)
-			dt.Update(cd)
-			dt.ChangeDirectory(fp)
+			err := dt.Update(cd)
+			if err != nil {
+				log.Error(err)
+			}
+			err = dt.ChangeDirectory(fp)
+			if err != nil {
+				log.Error(err)
+			}
 			cd = fp
 		} else {
 			(*dt)[cd].SelectFileByName(selection)
-			dt.Update(cd)
+			err := dt.Update(cd)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	case "toggleHidden":
 		toggleHidden()
