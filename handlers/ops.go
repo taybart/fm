@@ -47,13 +47,35 @@ func deletef(dt *fs.Tree, cd string) error {
 	return dt.Update(cd)
 }
 
-func fuzzyFind(dir *fs.Directory) {
+func inspect(dt *fs.Tree, cd string) error {
+	file := (*dt)[cd].ActiveFile
+	editor, exists := os.LookupEnv("EDITOR")
+	if !exists {
+		editor = "vi"
+	}
+	if editor == "vim" || editor == "nvim" {
+		return runThis(editor, "-u", conf.Folder+"/vimrc.preview", "-M", file.Name)
+	}
+	return runThis(editor, file.Name)
+}
+
+func edit(dt *fs.Tree, cd string) error {
+	file := (*dt)[cd].ActiveFile
+	editor, exists := os.LookupEnv("EDITOR")
+	if !exists {
+		editor = "vi"
+	}
+	return runThis(editor, file.Name)
+}
+
+func fuzzyFind(dir *fs.Directory) error {
 	filtered := fzf(func(in io.WriteCloser) {
 		for _, f := range dir.Files {
 			fmt.Fprintln(in, f.Name)
 		}
 	})
 	log.Info(filtered)
+	return nil
 }
 
 func fzf(input func(in io.WriteCloser)) []string {

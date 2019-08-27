@@ -72,6 +72,7 @@ func (c *Command) UpdateIndex(dir int) {
 // Run : command
 func (c *Command) Run(dt *fs.Tree, cd string) {
 	isShell := regexp.MustCompile(`^\!`)
+	didSomething := true
 	switch {
 	case isShell.MatchString(c.Input):
 		log.Info("command")
@@ -92,12 +93,32 @@ func (c *Command) Run(dt *fs.Tree, cd string) {
 		if err != nil {
 			log.Error("paste", err)
 		}
+	case "inspect":
+		err := inspect(dt, cd)
+		if err != nil {
+			log.Error("inspect", err)
+		}
+
+	case "edit":
+		err := edit(dt, cd)
+		if err != nil {
+			log.Error("edit", err)
+		}
+	case "fuzzy":
+		err := fuzzyFind((*dt)[cd])
+		if err != nil {
+			log.Error("fuzzy", err)
+		}
 	case "q", "quit":
 		Close()
+	default:
+		didSomething = false
 	}
-	runCommands = append(runCommands, c.Input)
-	c.Reset()
-	state = normal
+	if didSomething {
+		runCommands = append(runCommands, c.Input)
+		c.Reset()
+		state = normal
+	}
 }
 
 func prompt(p string) string {

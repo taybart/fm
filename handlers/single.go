@@ -12,31 +12,24 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		switch r {
 		case 'd':
 			log.Info("cd")
-			cmd.Run(dt, cd)
 		}
 		trailing = '⌘'
 	case 'd':
 		switch r {
 		case 'd':
-			log.Info("cut")
 			cmd.Set("cut")
-			cmd.Run(dt, cd)
 		}
 		trailing = '⌘'
 	case 'e':
 		switch r {
 		case 'd':
-			log.Info("delete")
 			cmd.Set("delete")
-			cmd.Run(dt, cd)
 		}
 		trailing = '⌘'
 	case 'p':
 		switch r {
 		case 'p':
-			log.Info("paste")
 			cmd.Set("paste")
-			cmd.Run(dt, cd)
 		}
 		trailing = '⌘'
 	case 'y':
@@ -44,24 +37,28 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		case 'y':
 			log.Info("yank")
 			cmd.Set("yank")
-			cmd.Run(dt, cd)
 		}
 		trailing = '⌘'
 	default:
 		switch r {
+		// case 'c':
+		// cmd.Set("{ d: change dir }")
+		// state = single
 		case 'd':
 			cmd.Set("{ d: delete }")
 			state = single
-		case 'c':
-			cmd.Set("{ d: change dir }")
-			state = single
+		case 'e':
+			cmd.Set("edit")
+		case 'i':
+			cmd.Set("inspect")
 		case 'y':
 			cmd.Set("{ y: yank }")
 			state = single
 		case '/':
-			fuzzyFind((*dt)[cd])
+			cmd.Set("fuzzy")
 		}
 		trailing = r
 	}
+	cmd.Run(dt, cd)
 	return cd
 }
