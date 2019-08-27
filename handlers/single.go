@@ -24,6 +24,8 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		switch r {
 		case 'd':
 			cmd.Set("delete")
+		case 'e':
+			cmd.Set("edit")
 		}
 		trailing = '⌘'
 	case 'p':
@@ -35,8 +37,13 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 	case 'y':
 		switch r {
 		case 'y':
-			log.Info("yank")
 			cmd.Set("yank")
+		}
+		trailing = '⌘'
+	case 'z':
+		switch r {
+		case 'h':
+			cmd.Set("toggleHidden")
 		}
 		trailing = '⌘'
 	default:
@@ -47,12 +54,13 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		case 'd':
 			cmd.Set("{ d: delete }")
 			state = single
-		case 'e':
-			cmd.Set("edit")
 		case 'i':
 			cmd.Set("inspect")
 		case 'y':
 			cmd.Set("{ y: yank }")
+			state = single
+		case 'z':
+			cmd.Set("{ h: toggleHidden }")
 			state = single
 		case '/':
 			cmd.Set("fuzzy")

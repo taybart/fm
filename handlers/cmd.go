@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/display"
@@ -71,12 +72,7 @@ func (c *Command) UpdateIndex(dir int) {
 
 // Run : command
 func (c *Command) Run(dt *fs.Tree, cd string) {
-	isShell := regexp.MustCompile(`^\!`)
 	didSomething := true
-	switch {
-	case isShell.MatchString(c.Input):
-		log.Info("command")
-	}
 	switch c.Input {
 	case "delete":
 		err := deletef(dt, cd)
@@ -109,6 +105,9 @@ func (c *Command) Run(dt *fs.Tree, cd string) {
 		if err != nil {
 			log.Error("fuzzy", err)
 		}
+	case "toggleHidden":
+		toggleHidden()
+		dt.Update(cd)
 	case "q", "quit":
 		Close()
 	default:
@@ -152,7 +151,20 @@ func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) {
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		cmd.Del()
 	case tcell.KeyEnter:
-		cmd.Run(dt, cd)
+		isShell := regexp.MustCompile(`^\!`)
+		if isShell.MatchString(cmd.Input) {
+			c := strings.Split(cmd.Input[1:], " ")
+			err := runThis(c[0], c[1:]...)
+			if err != nil {
+				log.Error(err)
+			}
+			err = dt.Update(cd)
+			if err != nil {
+				log.Error(err)
+			}
+			cmd.Reset()
+			state = normal
+		}
 	case tcell.KeyEsc:
 		cmd.Reset()
 		state = normal

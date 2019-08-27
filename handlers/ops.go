@@ -22,7 +22,6 @@ func paste(dt *fs.Tree, cd string) error {
 			lastClipboard = c
 		}
 	}
-	log.Info("LAST", lastClipboard)
 	switch lastClipboard {
 	case "cut":
 		activeFile.Move(dt, cd)
@@ -39,7 +38,6 @@ func yank(dt *fs.Tree, cd string) error {
 
 func deletef(dt *fs.Tree, cd string) error {
 	ans := prompt(fmt.Sprintf("Delete %s? [Y/n]", (*dt)[cd].ActiveFile.Name))
-	log.Info(ans)
 	if ans == "n" {
 		return nil
 	}
@@ -127,17 +125,17 @@ func takeOutTrash() {
 func runThis(toRun string, args ...string) error {
 	display.Close()
 	cmd := exec.Command(toRun, args...)
-	// done := make(chan error)
-	// go func() {
+
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
-	// }()
+
 	log.Verbose("Executing command", toRun)
 	err := cmd.Run()
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	display.Init(conf)
 	log.Verbose("Done")
 	return nil

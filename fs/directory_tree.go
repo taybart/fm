@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -87,6 +88,7 @@ func (dt *Tree) ChangeDirectory(dirname string) (err error) {
 			}
 		}
 	}
+	os.Chdir(dirname)
 	return
 }
 
