@@ -90,6 +90,12 @@ func runes(r rune, dt *fs.Tree, current string) string {
 		cmd.Reset()
 		cmd.Active = true
 		state = command
+	case ' ':
+		(*dt)[cd].Selected[(*dt)[cd].ActiveFile.FullPath] = !(*dt)[cd].Selected[(*dt)[cd].ActiveFile.FullPath]
+		err := dt.SelectFile(1, cd)
+		if err != nil {
+			log.Error(err)
+		}
 	case 'q':
 		Close()
 	default:
