@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"path"
 	"regexp"
 	"strings"
 
@@ -101,38 +100,25 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 			log.Error("edit", err)
 		}
 	case "fuzzy":
-		selection, err := fuzzyFind((*dt)[cd])
+		var err error
+		cd, err = fuzzyCD(dt, cd)
 		if err != nil {
 			log.Error("fuzzy", err)
-		}
-		fp := path.Join(cd, selection)
-		isdir, err := fs.IsDir(fp)
-		if err != nil {
-			log.Error(err)
-		}
-		if isdir {
-			(*dt)[cd].SelectFileByName(selection)
-			err := dt.Update(cd)
-			if err != nil {
-				log.Error(err)
-			}
-			err = dt.ChangeDirectory(fp)
-			if err != nil {
-				log.Error(err)
-			}
-			cd = fp
-		} else {
-			(*dt)[cd].SelectFileByName(selection)
-			err := dt.Update(cd)
-			if err != nil {
-				log.Error(err)
-			}
 		}
 	case "toggleHidden":
 		toggleHidden()
 		err := dt.Update(cd)
 		if err != nil {
 			log.Error("toggleHidden", err)
+		}
+	case "undo":
+		err := digOutOfTrash()
+		if err != nil {
+			log.Error("undo", err)
+		}
+		err = dt.Update(cd)
+		if err != nil {
+			log.Error("undo", err)
 		}
 	case "q", "quit":
 		Close()

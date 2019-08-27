@@ -15,6 +15,8 @@ import (
 
 var activeFile fs.Pseudofile
 
+var deletedFiles []fs.Pseudofile
+
 func paste(dt *fs.Tree, cd string) error {
 	lastClipboard := "cut"
 	for _, c := range runCommands {
@@ -41,7 +43,7 @@ func deletef(dt *fs.Tree, cd string) error {
 	if ans == "n" {
 		return nil
 	}
-	moveToTrash((*dt)[cd].ActiveFile.FullPath)
+	moveToTrash((*dt)[cd].ActiveFile)
 	return dt.Update(cd)
 }
 
@@ -66,13 +68,38 @@ func edit(dt *fs.Tree, cd string) error {
 	return runThis(editor, file.Name)
 }
 
-func fuzzyFind(dir *fs.Directory) (string, error) {
+func fuzzyCD(dt *fs.Tree, cd string) (string, error) {
+	dir := (*dt)[cd]
 	filtered := fzf(func(in io.WriteCloser) {
 		for _, f := range dir.Files {
 			fmt.Fprintln(in, f.Name)
 		}
 	})
-	return filtered[0], nil
+	selected := filtered[0]
+	fp := path.Join(cd, selected)
+	isdir, err := fs.IsDir(fp)
+	if err != nil {
+		log.Error(err)
+	}
+	if isdir {
+		(*dt)[cd].SelectFileByName(selected)
+		err := dt.Update(cd)
+		if err != nil {
+			log.Error(err)
+		}
+		err = dt.ChangeDirectory(fp)
+		if err != nil {
+			log.Error(err)
+		}
+		cd = fp
+	} else {
+		(*dt)[cd].SelectFileByName(selected)
+		err := dt.Update(cd)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+	return cd, nil
 }
 
 func fzf(input func(in io.WriteCloser)) []string {
@@ -93,23 +120,47 @@ func fzf(input func(in io.WriteCloser)) []string {
 	return strings.Split(string(result), "\n")
 }
 
-// TODO add deletedFiles
-func moveToTrash(fn string) {
+func digOutOfTrash() error {
+	a := deletedFiles
+	f, a := a[len(a)-1], a[:len(a)-1]
+	deletedFiles = a
 	home, _ := os.LookupEnv("HOME")
-	if exists, err := fs.FileExists(home + "/.tmp/fm_trash/"); !exists {
+	trash := path.Join(home, "/.tmp/fm_trash/")
+	if exists, err := fs.FileExists(trash); !exists {
 		if err != nil {
 			log.Errorln(err)
 		}
-		err = os.MkdirAll(home+"/.tmp/fm_trash/", os.ModeDir|0755)
+		err = os.MkdirAll(trash, os.ModeDir|0755)
 		if err != nil {
 			log.Errorln(err)
 		}
 	}
-	err := os.Rename(fn, home+"/.tmp/fm_trash/"+path.Base(fn))
+	trashName := strings.ReplaceAll(f.FullPath, "/", "_")
+	err := os.Rename(path.Join(trash, trashName), f.FullPath)
 	if err != nil {
 		log.Errorln(err)
 	}
-	// deletedFiles = append(deletedFiles, fn)
+	return err
+}
+
+func moveToTrash(f fs.Pseudofile) {
+	home, _ := os.LookupEnv("HOME")
+	trash := path.Join(home, "/.tmp/fm_trash/")
+	if exists, err := fs.FileExists(trash); !exists {
+		if err != nil {
+			log.Errorln(err)
+		}
+		err = os.MkdirAll(trash, os.ModeDir|0755)
+		if err != nil {
+			log.Errorln(err)
+		}
+	}
+	trashName := strings.ReplaceAll(f.FullPath, "/", "_")
+	err := os.Rename(f.FullPath, path.Join(trash, trashName))
+	if err != nil {
+		log.Errorln(err)
+	}
+	deletedFiles = append(deletedFiles, f)
 }
 
 func takeOutTrash() {

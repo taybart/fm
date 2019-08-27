@@ -26,6 +26,8 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 			cmd.Set("delete")
 		case 'e':
 			cmd.Set("edit")
+		case 'u':
+			cmd.Set("undo")
 		}
 		trailing = '⌘'
 	case 'p':
