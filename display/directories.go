@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/fs"
-	"github.com/taybart/log"
 )
 
 // DrawDir render directory
@@ -114,7 +113,6 @@ func getColors(f fs.Pseudofile, active, selected bool) tcell.Style {
 			s = s.Foreground(colorExec).Bold(true)
 		} else if f.IsLink && f.Link.Location != "" {
 			if cf, err := os.Stat(f.Link.Location); err == nil && cf.IsDir() {
-				log.Info("good symlink", f.Name)
 				s = s.Foreground(colorSymlinkGood).Bold(true)
 			}
 			if f.Link.Broken {

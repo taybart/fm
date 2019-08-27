@@ -48,9 +48,6 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		trailing = '⌘'
 	default:
 		switch r {
-		// case 'c':
-		// cmd.Set("{ d: change dir }")
-		// state = single
 		case 'd':
 			cmd.Set("{ d: delete }")
 			state = single
@@ -67,6 +64,6 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		}
 		trailing = r
 	}
-	cmd.Run(dt, cd)
+	cd = cmd.Run(dt, cd)
 	return cd
 }

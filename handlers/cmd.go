@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"path"
 	"regexp"
 	"strings"
 
@@ -71,7 +72,7 @@ func (c *Command) UpdateIndex(dir int) {
 }
 
 // Run : command
-func (c *Command) Run(dt *fs.Tree, cd string) {
+func (c *Command) Run(dt *fs.Tree, cd string) string {
 	didSomething := true
 	switch c.Input {
 	case "delete":
@@ -94,20 +95,36 @@ func (c *Command) Run(dt *fs.Tree, cd string) {
 		if err != nil {
 			log.Error("inspect", err)
 		}
-
 	case "edit":
 		err := edit(dt, cd)
 		if err != nil {
 			log.Error("edit", err)
 		}
 	case "fuzzy":
-		err := fuzzyFind((*dt)[cd])
+		selection, err := fuzzyFind((*dt)[cd])
 		if err != nil {
 			log.Error("fuzzy", err)
 		}
+		fp := path.Join(cd, selection)
+		isdir, err := fs.IsDir(fp)
+		if err != nil {
+			log.Error(err)
+		}
+		if isdir {
+			(*dt)[cd].SelectFileByName(selection)
+			dt.Update(cd)
+			dt.ChangeDirectory(fp)
+			cd = fp
+		} else {
+			(*dt)[cd].SelectFileByName(selection)
+			dt.Update(cd)
+		}
 	case "toggleHidden":
 		toggleHidden()
-		dt.Update(cd)
+		err := dt.Update(cd)
+		if err != nil {
+			log.Error("toggleHidden", err)
+		}
 	case "q", "quit":
 		Close()
 	default:
@@ -118,6 +135,7 @@ func (c *Command) Run(dt *fs.Tree, cd string) {
 		c.Reset()
 		state = normal
 	}
+	return cd
 }
 
 func prompt(p string) string {

@@ -88,8 +88,7 @@ func (dt *Tree) ChangeDirectory(dirname string) (err error) {
 			}
 		}
 	}
-	os.Chdir(dirname)
-	return
+	return os.Chdir(dirname)
 }
 
 // Update sync directory

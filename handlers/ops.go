@@ -66,14 +66,13 @@ func edit(dt *fs.Tree, cd string) error {
 	return runThis(editor, file.Name)
 }
 
-func fuzzyFind(dir *fs.Directory) error {
+func fuzzyFind(dir *fs.Directory) (string, error) {
 	filtered := fzf(func(in io.WriteCloser) {
 		for _, f := range dir.Files {
 			fmt.Fprintln(in, f.Name)
 		}
 	})
-	log.Info(filtered)
-	return nil
+	return filtered[0], nil
 }
 
 func fzf(input func(in io.WriteCloser)) []string {
