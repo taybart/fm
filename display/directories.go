@@ -87,9 +87,12 @@ func drawParentDir(dir fs.Directory) {
 	drawDir(dir, 0, width)
 }
 
-func drawChildDir(dir fs.Directory, offset, width int) {
-	// TODO file previews
-	drawDir(dir, offset, width)
+func drawChildDir(w Window, offset, width int) {
+	if w.Child.Path != "" {
+		drawDir(w.Child, offset, width)
+	} else {
+		drawFilePreview(offset, width, w.Current.ActiveFile.FullPath)
+	}
 }
 func getColors(f fs.Pseudofile, active, selected bool) tcell.Style {
 	s := tcell.StyleDefault

@@ -94,9 +94,7 @@ func Draw(w Window) {
 	offset = int(float64(cr[0])/10.0*float64(cw)) +
 		int(float64(cr[1])/10.0*float64(cw))
 	width = int(float64(cr[2]) / 10.0 * float64(cw))
-	if w.Child.Path != "" {
-		drawChildDir(w.Child, offset, width)
-	}
+	drawChildDir(w, offset, width)
 
 	drawHeader(w.Current)
 	drawFooter(w)
