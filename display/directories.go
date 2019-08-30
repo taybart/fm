@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell"
 	"github.com/taybart/fm/fs"
+	"github.com/taybart/log"
 )
 
 // DrawDir render directory
@@ -91,7 +92,10 @@ func drawChildDir(w Window, offset, width int) {
 	if w.Child.Path != "" {
 		drawDir(w.Child, offset, width)
 	} else {
-		drawFilePreview(offset, width, w.Current.ActiveFile.FullPath)
+		err := drawFilePreview(offset, width, w.Current.ActiveFile.FullPath)
+		if err != nil && err != errFileTooLarge {
+			log.Error(err)
+		}
 	}
 }
 func getColors(f fs.Pseudofile, active, selected bool) tcell.Style {

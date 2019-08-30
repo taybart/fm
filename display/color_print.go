@@ -1,6 +1,7 @@
 package display
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,21 +15,27 @@ import (
 	"github.com/taybart/log"
 )
 
+var errFileTooLarge = errors.New("File too large for preview")
+
 func drawFilePreview(offset, width int, fname string) error {
 	log.Info("Preview", fname)
 	source, err := getFileContents(fname)
+	if err != nil {
+		return err
+	}
 	// Determine lexer.
 	l := lexers.Match(fname)
 	if l == nil {
 		l = lexers.Analyse(source)
 	}
 	if l == nil {
+		// return fmt.Errorf("No lexer")
 		l = lexers.Fallback
 	}
 	l = chroma.Coalesce(l)
 
 	// Determine style.
-	style := styles.Get("solarized-dark256")
+	style := styles.Get("dracula")
 	if style == nil {
 		style = styles.Fallback
 	}
@@ -89,6 +96,12 @@ func getFileContents(fname string) (contents string, err error) {
 
 	fi, err := file.Stat()
 	if err != nil {
+		return
+	}
+
+	if fi.Size() > 3*1024*1024 {
+		log.Verbose("File is larger than 3MB, no preview")
+		err = errFileTooLarge
 		return
 	}
 
