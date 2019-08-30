@@ -91,6 +91,7 @@ func runes(r rune, dt *fs.Tree, current string) string {
 		cmd.Active = true
 		state = command
 	case ' ':
+		selectedFiles = append(selectedFiles, (*dt)[cd].ActiveFile)
 		(*dt)[cd].Selected[(*dt)[cd].ActiveFile.FullPath] = !(*dt)[cd].Selected[(*dt)[cd].ActiveFile.FullPath]
 		err := dt.SelectFile(1, cd)
 		if err != nil {
@@ -119,9 +120,9 @@ func keys(k tcell.Key, dt *fs.Tree, current string) string {
 			log.Error(err)
 		}
 	case tcell.KeyEsc:
+		selectedFiles = []fs.Pseudofile{}
 		cmd.Reset()
 		state = normal
-		// s.selectedFiles = make(map[string]pseudofile) // clear selected files
 	}
 	return cd
 }

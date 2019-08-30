@@ -17,6 +17,8 @@ var activeFile fs.Pseudofile
 
 var deletedFiles []fs.Pseudofile
 
+var selectedFiles []fs.Pseudofile
+
 func paste(dt *fs.Tree, cd string) error {
 	lastClipboard := "cut"
 	for _, c := range runCommands {
@@ -26,24 +28,53 @@ func paste(dt *fs.Tree, cd string) error {
 	}
 	switch lastClipboard {
 	case "cut":
-		activeFile.Move(dt, cd)
+		if len(selectedFiles) == 0 {
+			activeFile.Move(dt, cd)
+		} else {
+			for _, f := range selectedFiles {
+				f.Move(dt, cd)
+			}
+		}
 	case "yank":
-		activeFile.Copy(dt, cd)
+		if len(selectedFiles) == 0 {
+			activeFile.Copy(dt, cd)
+		} else {
+			for _, f := range selectedFiles {
+				f.Copy(dt, cd)
+			}
+		}
 	}
 	return nil
 }
 
 func yank(dt *fs.Tree, cd string) error {
-	activeFile = (*dt)[cd].ActiveFile
+	if len(selectedFiles) == 0 {
+		activeFile = (*dt)[cd].ActiveFile
+	}
 	return nil
 }
 
 func deletef(dt *fs.Tree, cd string) error {
-	ans := prompt(fmt.Sprintf("Delete %s? [Y/n]", (*dt)[cd].ActiveFile.Name))
-	if ans == "n" {
-		return nil
+	if len(selectedFiles) == 0 {
+		ans := prompt(fmt.Sprintf("Delete %s? [Y/n]", (*dt)[cd].ActiveFile.Name))
+		if ans != "n" {
+			moveToTrash((*dt)[cd].ActiveFile)
+			return nil
+		}
+	} else {
+		names := []string{}
+		for _, f := range selectedFiles {
+			names = append(names, f.Name)
+		}
+		ans := prompt(fmt.Sprintf("Delete %v? [Y/n]", selectedFiles))
+		if ans != "n" {
+			for _, f := range selectedFiles {
+				moveToTrash(f)
+			}
+		} else {
+			return nil
+		}
 	}
-	moveToTrash((*dt)[cd].ActiveFile)
 	return dt.Update(cd)
 }
 
