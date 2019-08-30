@@ -52,10 +52,10 @@ func drawFilePreview(offset, width int, fname string) error {
 		entry := style.Get(token.Type)
 		if !entry.IsZero() {
 			if entry.Bold == chroma.Yes {
-				s.Bold(true)
+				s = s.Bold(true)
 			}
 			if entry.Underline == chroma.Yes {
-				s.Underline(true)
+				s = s.Underline(true)
 			}
 			if entry.Colour.IsSet() {
 				fg := tcell.NewHexColor(int32(entry.Colour))
