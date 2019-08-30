@@ -2,18 +2,11 @@ package handlers
 
 import (
 	"github.com/taybart/fm/fs"
-	"github.com/taybart/log"
 )
 
 // Single key handler
 func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 	switch trailing {
-	case 'c':
-		switch r {
-		case 'd':
-			log.Info("cd")
-		}
-		trailing = '⌘'
 	case 'd':
 		switch r {
 		case 'd':
