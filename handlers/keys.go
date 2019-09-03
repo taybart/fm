@@ -105,7 +105,7 @@ func runes(r rune, dt *fs.Tree, current string) string {
 	return cd
 }
 
-// runes handler
+// keys handler
 func keys(k tcell.Key, dt *fs.Tree, current string) string {
 	cd := current
 	switch k {

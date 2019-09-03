@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"fmt"
+	"os"
+	"path"
 	"regexp"
 	"strings"
 
@@ -73,7 +76,8 @@ func (c *Command) UpdateIndex(dir int) {
 // Run : command
 func (c *Command) Run(dt *fs.Tree, cd string) string {
 	didSomething := true
-	switch c.Input {
+	cmdInput := strings.Split(c.Input, " ")
+	switch cmdInput[0] {
 	case "delete":
 		err := deletef(dt, cd)
 		if err != nil {
@@ -120,6 +124,21 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 		if err != nil {
 			log.Error("undo", err)
 		}
+	case "rename", "rn":
+		name := strings.Join(cmdInput[1:], " ")
+		fp := (*dt)[cd].ActiveFile.FullPath
+		newPath := path.Join(fs.GetParentPath(fp), name)
+		log.Verbose("Renaming", (*dt)[cd].ActiveFile.Name, name)
+		err := os.Rename(fp, newPath)
+		if err != nil {
+			log.Error(err)
+			break
+		}
+		err = dt.Update(cd)
+		if err != nil {
+			log.Error(err)
+		}
+		(*dt)[cd].SelectFileByName(name)
 	case "q", "quit":
 		Close()
 	default:
@@ -131,6 +150,17 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 		state = normal
 	}
 	return cd
+}
+
+// Complete : command
+func (c *Command) Complete(dt *fs.Tree, cd string) {
+
+	cmdInput := strings.Split(c.Input, " ")
+	switch cmdInput[0] {
+	case "rename", "rn":
+		c.Input = fmt.Sprintf("%s %s", cmdInput[0], (*dt)[cd].ActiveFile.Name)
+		c.Index = len(c.Input)
+	}
 }
 
 func prompt(p string) string {
@@ -150,6 +180,7 @@ func cmdRune(r rune, dt *fs.Tree, current string) {
 		valid := regexp.MustCompile(`[^[:cntrl:]]`)
 		if valid.Match([]byte(string(r))) {
 			cmd.Add(r)
+			log.Verbose(cmd)
 		}
 	}
 }
@@ -163,8 +194,11 @@ func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) {
 		cmd.UpdateIndex(-1)
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		cmd.Del()
+
+	case tcell.KeyTab:
+		cmd.Complete(dt, cd)
 	case tcell.KeyEnter:
-		isShell := regexp.MustCompile(`^\!`)
+		isShell := regexp.MustCompile(`^!`)
 		if isShell.MatchString(cmd.Input) {
 			c := strings.Split(cmd.Input[1:], " ")
 			err := runThis(c[0], c[1:]...)
@@ -177,6 +211,8 @@ func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) {
 			}
 			cmd.Reset()
 			state = normal
+		} else {
+			cmd.Run(dt, cd)
 		}
 	case tcell.KeyEsc:
 		cmd.Reset()

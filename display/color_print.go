@@ -18,12 +18,11 @@ import (
 var errFileTooLarge = errors.New("File too large for preview")
 
 func drawFilePreview(offset, width int, fname string) error {
-	log.Info("Preview", fname)
+	log.Verbose("Preview", fname)
 	source, err := getFileContents(fname)
 	if err != nil {
 		return err
 	}
-	// Determine lexer.
 	l := lexers.Match(fname)
 	if l == nil {
 		l = lexers.Analyse(source)
@@ -61,20 +60,13 @@ func drawFilePreview(offset, width int, fname string) error {
 				fg := tcell.NewHexColor(int32(entry.Colour))
 				s = s.Foreground(fg)
 			}
-			/* if entry.Background.IsSet() {
-				bg := tcell.NewHexColor(int32(entry.Background))
-				s = s.Background(bg)
-			} */
 		}
-		// log.Infof("%#v\n", token.Value)
 		newline := regexp.MustCompile("^\n+")
 		if newline.Match([]byte(token.Value)) {
 			line++
-			// log.Verbose("NewLine", line, len(token.Value))
 			col = offset
 			tab := regexp.MustCompile("\t+")
 			if tab.Match([]byte(token.Value)) {
-				log.Infof("%#v\n", token.Value)
 				col += 2
 			}
 		}
