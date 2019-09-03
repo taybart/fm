@@ -62,10 +62,6 @@ func deletef(dt *fs.Tree, cd string) error {
 			return nil
 		}
 	} else {
-		names := []string{}
-		for _, f := range selectedFiles {
-			names = append(names, f.Name)
-		}
 		ans := prompt(fmt.Sprintf("Delete %v? [Y/n]", selectedFiles))
 		if ans != "n" {
 			for _, f := range selectedFiles {
