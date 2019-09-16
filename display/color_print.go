@@ -74,7 +74,7 @@ func drawFilePreview(offset, width int, fname string) error {
 		puts(col, line, width, str, false, s)
 		col += len(token.Value)
 	}
-
+	scr.Sync()
 	return nil
 }
 

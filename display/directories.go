@@ -92,10 +92,12 @@ func drawChildDir(w Window, offset, width int) {
 	if w.Child.Path != "" {
 		drawDir(w.Child, offset, width)
 	} else {
-		err := drawFilePreview(offset, width, w.Current.ActiveFile.FullPath)
-		if err != nil && err != errFileTooLarge {
-			log.Error(err)
-		}
+		go func(w Window, offset, width int) {
+			err := drawFilePreview(offset, width, w.Current.ActiveFile.FullPath)
+			if err != nil && err != errFileTooLarge {
+				log.Error(err)
+			}
+		}(w, offset, width)
 	}
 }
 func getColors(f fs.Pseudofile, active, selected bool) tcell.Style {
