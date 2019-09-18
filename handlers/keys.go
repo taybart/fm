@@ -47,8 +47,8 @@ func Keys(ev *tcell.EventKey, dt *fs.Tree, cd string) HandlerReturn {
 		cd = keys(ev.Key(), dt, cd)
 		cd = runes(ev.Rune(), dt, cd)
 	case command:
-		cmdKeys(ev.Key(), dt, cd)
-		cmdRune(ev.Rune(), dt, cd)
+		cd = cmdKeys(ev.Key(), dt, cd)
+		cd = cmdRune(ev.Rune(), dt, cd)
 	case single:
 		singleBuilder(ev.Rune(), dt, cd)
 	}

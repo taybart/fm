@@ -14,7 +14,7 @@ type Tree map[string]*Directory
 
 var conf *config.Config
 
-// Init initalize
+// Init initialize
 func Init(c *config.Config, cd string) (dt *Tree, err error) {
 	conf = c
 

@@ -58,6 +58,7 @@ func main() {
 				cd = hr.CD
 				cmd = hr.Cmd
 			}
+			log.Verbose("Current Directory", cd)
 		}
 	}()
 	<-quit

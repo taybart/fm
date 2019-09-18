@@ -46,6 +46,10 @@ func singleBuilder(r rune, dt *fs.Tree, cd string) string {
 		case 'd':
 			cmd.Set("{ d: delete }")
 			state = single
+		case 'S':
+			cmd.Set("shell")
+		case 'R':
+			cmd.Set("refresh")
 		case 'i':
 			cmd.Set("inspect")
 		case 'y':

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -78,6 +79,23 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 	didSomething := true
 	cmdInput := strings.Split(c.Input, " ")
 	switch cmdInput[0] {
+	case "cd":
+		name := strings.Join(cmdInput[1:], " ")
+		if name[0] == '~' {
+			name = path.Join(os.Getenv("HOME"), name[1:])
+		}
+		path, err := filepath.Abs(name)
+		if err != nil {
+			didSomething = false
+			log.Error(err)
+			break
+		}
+		err = dt.ChangeDirectory(path)
+		if err != nil {
+			log.Error(err)
+		}
+		cd = path
+		log.Info(cd)
 	case "delete":
 		err := deletef(dt, cd)
 		if err != nil {
@@ -124,6 +142,15 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 		if err != nil {
 			log.Error("undo", err)
 		}
+	case "s", "shell":
+		os.Chdir(cd)
+		end <- true
+		/* err := runThis(os.Getenv("SHELL"))
+		if err != nil {
+			log.Error("shell", err)
+		} */
+	case "refresh":
+		dt.Update(cd)
 	case "rename", "rn":
 		name := strings.Join(cmdInput[1:], " ")
 		fp := (*dt)[cd].ActiveFile.FullPath
@@ -174,7 +201,7 @@ func prompt(p string) string {
 }
 
 // cmd rune handler
-func cmdRune(r rune, dt *fs.Tree, current string) {
+func cmdRune(r rune, dt *fs.Tree, current string) string {
 	switch r {
 	default:
 		valid := regexp.MustCompile(`[^[:cntrl:]]`)
@@ -183,10 +210,11 @@ func cmdRune(r rune, dt *fs.Tree, current string) {
 			log.Verbose(cmd)
 		}
 	}
+	return current
 }
 
 // cmd key handler
-func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) {
+func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) string {
 	switch k {
 	case tcell.KeyRight:
 		cmd.UpdateIndex(1)
@@ -212,10 +240,11 @@ func cmdKeys(k tcell.Key, dt *fs.Tree, cd string) {
 			cmd.Reset()
 			state = normal
 		} else {
-			cmd.Run(dt, cd)
+			cd = cmd.Run(dt, cd)
 		}
 	case tcell.KeyEsc:
 		cmd.Reset()
 		state = normal
 	}
+	return cd
 }
