@@ -50,6 +50,12 @@ func Keys(ev *tcell.EventKey, dt *fs.Tree, cd string) HandlerReturn {
 		cd = cmdKeys(ev.Key(), dt, cd)
 		cd = cmdRune(ev.Rune(), dt, cd)
 	case single:
+		if ev.Key() == tcell.KeyEsc {
+			selectedFiles = []fs.Pseudofile{}
+			cmd.Reset()
+			state = normal
+			break
+		}
 		singleBuilder(ev.Rune(), dt, cd)
 	}
 	return HandlerReturn{CD: cd, Cmd: cmd}
