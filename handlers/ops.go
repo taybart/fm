@@ -59,19 +59,20 @@ func deletef(dt *fs.Tree, cd string) error {
 		ans := prompt(fmt.Sprintf("Delete %s? [Y/n]", (*dt)[cd].ActiveFile.Name))
 		if ans != "n" {
 			moveToTrash((*dt)[cd].ActiveFile)
-			return nil
-		}
-	} else {
-		ans := prompt(fmt.Sprintf("Delete %v? [Y/n]", selectedFiles))
-		if ans != "n" {
-			for _, f := range selectedFiles {
-				moveToTrash(f)
+			err := dt.SelectFile(-1, cd)
+			if err != nil {
+				log.Error(err)
 			}
-		} else {
-			return nil
+		}
+		return dt.Update(cd)
+	}
+	ans := prompt(fmt.Sprintf("Delete %v? [Y/n]", selectedFiles))
+	if ans != "n" {
+		for _, f := range selectedFiles {
+			moveToTrash(f)
 		}
 	}
-	return dt.Update(cd)
+	return nil
 }
 
 func inspect(dt *fs.Tree, cd string) error {
