@@ -115,6 +115,32 @@ func runes(r rune, dt *fs.Tree, current string) string {
 func keys(k tcell.Key, dt *fs.Tree, current string) string {
 	cd := current
 	switch k {
+	case tcell.KeyLeft:
+		parent := fs.GetParentPath(cd)
+		err := dt.ChangeDirectory(parent)
+		cd = parent
+		if err != nil {
+			log.Error(err)
+			cd = current
+		}
+	case tcell.KeyRight:
+		child := (*dt)[cd].ActiveFile.FullPath
+		err := dt.ChangeDirectory(child)
+		cd = child
+		if err != nil {
+			cd = current
+			log.Error(err)
+		}
+	case tcell.KeyDown:
+		err := dt.SelectFile(1, cd)
+		if err != nil {
+			log.Error(err)
+		}
+	case tcell.KeyUp:
+		err := dt.SelectFile(-1, cd)
+		if err != nil {
+			log.Error(err)
+		}
 	case tcell.KeyCtrlJ:
 		err := dt.SelectFile(conf.JumpAmount, cd)
 		if err != nil {
