@@ -143,12 +143,10 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 			log.Error("undo", err)
 		}
 	case "s", "shell":
-		os.Chdir(cd)
-		end <- true
-		/* err := runThis(os.Getenv("SHELL"))
+		err := runThis(os.Getenv("SHELL"))
 		if err != nil {
 			log.Error("shell", err)
-		} */
+		}
 	case "refresh":
 		dt.Update(cd)
 	case "rename", "rn":
