@@ -1,31 +1,34 @@
 syntax on
 filetype plugin indent on
+" long live zsh
+set shell=/bin/zsh
 
+" remove pauses after j in insert mode
+set timeoutlen=1000 ttimeoutlen=0
 
-set clipboard+=unnamedplus
-if has('unnamedplus')
-  set clipboard=unnamedplus,unnamed
-else
-  if !has('nvim')
-    set clipboard=unnamed
-  endif
-endif
+" use system clipboard
+set clipboard=unnamedplus,unnamed
 
-set mouse=a
-if !has('nvim')
-  set ttymouse=xterm2
-endif
+" add line wrapping
+set whichwrap+=<,>,h,l,[,]
 
-set nocompatible
+" allow unsaved buffers
+set hidden
+
+" use 2 spaces as tabs and always
+" expand to spaces
 set expandtab
 set tabstop=2
 set shiftwidth=2
 set softtabstop=2
 
-set number
-set relativenumber
-set hlsearch
-highlight Search ctermbg=Yellow ctermfg=Black
+" allow mouse scrolling
+set mouse=a
+
+" show incomplete commands (like substitute)
+if has('nvim')
+	set inccommand=nosplit
+endif
 
 try
   colorscheme gruvbox
