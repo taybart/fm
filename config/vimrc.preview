@@ -1,0 +1,88 @@
+syntax on
+filetype plugin indent on
+
+
+set clipboard+=unnamedplus
+if has('unnamedplus')
+  set clipboard=unnamedplus,unnamed
+else
+  if !has('nvim')
+    set clipboard=unnamed
+  endif
+endif
+
+set mouse=a
+if !has('nvim')
+  set ttymouse=xterm2
+endif
+
+set nocompatible
+set expandtab
+set tabstop=2
+set shiftwidth=2
+set softtabstop=2
+
+set number
+set relativenumber
+set hlsearch
+highlight Search ctermbg=Yellow ctermfg=Black
+
+try
+  colorscheme gruvbox
+catch /^Vim\%((\a\+)\)\=:E185/
+    " deal with it
+endtry
+
+let mapleader = "\<Space>"
+
+"--- Navigation ---"
+" Faster down and up
+nnoremap <c-j> 15gj
+vnoremap <c-j> 15gj
+nnoremap <c-k> 15gk
+vnoremap <c-k> 15gk
+" Allow for innerline navagation
+nmap j gj
+nmap k gk
+" End and beg of line easier
+nnoremap H ^
+nnoremap L $
+" Allow for homerow up and down in command mode
+cnoremap <c-j> <down>
+cnoremap <c-k> <up>
+" Buffer control
+nmap <Leader>l :bnext<CR>
+nmap <Leader>n :bnext<CR>
+nmap <Leader>h :bprevious<CR>
+nmap <Leader>d :bp <BAR> bd #<CR>
+
+nmap q :q!<CR>
+nmap i :q!<CR>
+
+
+"--- Idiot proofing ---"
+" Bad strokes
+cnoremap w' w
+cnoremap W w
+cnoremap Q q
+
+" Easy escape from insert
+imap jk <Esc>
+imap jK <Esc>
+imap JK <Esc>
+imap kj <Esc>
+imap KJ <Esc>
+
+"--- Conveniance ---"
+" These create newlines like o and O but stay in normal mode
+nnoremap <silent> zj o<Esc>k
+nnoremap <silent> zk O<Esc>j
+" indents
+nnoremap <leader>t<CR> mzgg=G`z:w<CR>
+nnoremap <Tab> ==
+vnoremap <Tab> =
+" Get rid of the fucking stupid OCD whitespace
+nnoremap <leader>w<CR> :%s/\s\+$//<CR>:w<CR>
+" paste mode
+nnoremap <Leader>sp :set paste<CR>
+nnoremap <Leader>sn :set nopaste<CR>

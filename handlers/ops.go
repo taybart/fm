@@ -82,7 +82,7 @@ func inspect(dt *fs.Tree, cd string) error {
     editor = "vi"
   }
   if editor == "vim" || editor == "nvim" {
-    return runThis(editor, "-u", conf.Folder+"/vimrc.preview", "-M", file.Name)
+    return runThis(editor, "-u", conf.Folder+"/vimrc", "-M", file.Name)
   }
   return runThis(editor, file.Name)
 }
