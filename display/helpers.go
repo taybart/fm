@@ -1,7 +1,7 @@
 package display
 
 import (
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 )
 
 func puts(x, y, maxWidth int, s string, wrap bool, style tcell.Style) {

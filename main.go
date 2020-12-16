@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/taybart/fm/config"
 	"github.com/taybart/fm/display"
 	"github.com/taybart/fm/fs"
