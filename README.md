@@ -2,7 +2,7 @@
 
 A tui file manager
 
-![fm-preview](https://taybart-samples.nyc3.digitaloceanspaces.com/fm.gif)
+![fm-preview](https://taybart-samples.nyc3.digitaloceanspaces.com/fm.gif?id=1)
 
 ## Commands
 
