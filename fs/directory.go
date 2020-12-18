@@ -138,8 +138,8 @@ func (d *Directory) SelectFileByName(name string) {
 			break
 		}
 	}
-	(*d).Active = a
-	(*d).ActiveFile = af
+	d.Active = a
+	d.ActiveFile = af
 }
 
 // isEmpty checks if directory is empty

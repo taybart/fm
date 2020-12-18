@@ -163,7 +163,7 @@ func (c *Command) Run(dt *fs.Tree, cd string) string {
 		if err != nil {
 			log.Error(err)
 		}
-		(*dt)[cd].SelectFileByName(name)
+		dt.SelectFileByName(cd, name)
 	case "q", "quit":
 		Close()
 	default:

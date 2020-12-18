@@ -50,6 +50,16 @@ func (dt *Tree) SelectFile(direction int, cd string) (err error) {
 	return
 }
 
+// SelectFileByName change active file
+func (dt *Tree) SelectFileByName(cd, file string) (err error) {
+	(*dt)[cd].SelectFileByName(file)
+	err = dt.ReadChild(cd)
+	if err != nil {
+		log.Error(err)
+	}
+	return
+}
+
 // ChangeDirectory cd
 func (dt *Tree) ChangeDirectory(dirname string) (err error) {
 	if ok, staterr := IsDir(dirname); !ok || staterr != nil {
