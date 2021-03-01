@@ -66,8 +66,17 @@ func deletef(dt *fs.Tree, cd string) error {
 			}
 		}
 	} else {
-		ans := prompt(fmt.Sprintf("Delete %v? [Y/n]", selectedFiles))
-		if ans != "n" {
+		files := "[ "
+		for i, f := range selectedFiles {
+			files += f.Name
+			if i < len(selectedFiles)-1 {
+				files += ", "
+			}
+		}
+		files += " ]"
+
+		ans := prompt(fmt.Sprintf("Delete %v? [Y/n]", files))
+		if ans != "n" && ans != "N" {
 			for _, f := range selectedFiles {
 				moveToTrash(f)
 			}
