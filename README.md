@@ -2,7 +2,7 @@
 
 A tui file manager
 
-WARNING: a quirk i live with but have not fixed #4
+WARNING: a quirk i live with but have not fixed [#4](https://github.com/taybart/fm/issues/4). If anyone else ends up using this I will fix it.
 
 ## Commands
 
