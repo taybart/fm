@@ -2,8 +2,6 @@
 
 A tui file manager
 
-![fm-preview](https://taybart-samples.nyc3.digitaloceanspaces.com/fm.gif?id=1)
-
 ## Commands
 
 |    cmd      | alt cmd | Description                                                                                              |
