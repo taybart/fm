@@ -2,6 +2,8 @@
 
 A tui file manager
 
+WARNING: a quirk i live with but have not fixed #4
+
 ## Commands
 
 |    cmd      | alt cmd | Description                                                                                              |
