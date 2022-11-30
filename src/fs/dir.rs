@@ -1,42 +1,86 @@
-use crate::fs::file::File;
+use super::file::File;
 
 use std::fs::read_dir;
 
 use tui::{
+    backend::Backend,
+    layout::Rect,
     style::{Color, Modifier, Style},
     widgets::{List, ListItem, ListState},
+    Frame,
 };
+
+struct State {
+    state: ListState,
+}
+
+impl State {
+    pub fn new() -> State {
+        State {
+            state: ListState::default(),
+        }
+    }
+    pub fn select(&mut self, index: Option<usize>) {
+        self.state.select(index);
+    }
+    pub fn selected(&self) -> Option<usize> {
+        self.state.selected()
+    }
+    // pub fn get(&self) -> ListState {
+    //     // self.state
+    // }
+}
 
 pub struct Dir {
     pub state: ListState,
+    // pub search_state: ListState,
     pub files: Vec<File>,
+    pub visible_files: Vec<File>,
     pub show_hidden: bool,
 }
 
 impl Dir {
-    pub fn new(dir_name: &str) -> Dir {
+    pub fn new(dir_name: &str, show_hidden: bool) -> Dir {
         let mut files = Vec::new();
+        let dir = read_dir(dir_name).unwrap();
         // should sort dir > files
-        for entry in read_dir(dir_name).unwrap() {
-            files.push(File::new(entry.unwrap()));
-            // do sort?
+        for entry in dir {
+            let file = File::new(entry.unwrap());
+            if file.is_hidden && show_hidden {
+                files.push(file);
+            } else {
+                files.push(file);
+            }
         }
+
+        files.sort_by(|a, b| a.name.cmp(&b.name));
 
         let mut state = ListState::default();
         state.select(Some(0));
+        // let mut search_state = ListState::default();
+        // search_state.select(Some(0));
         Dir {
             state,
+            // search_state,
+            visible_files: files.clone(),
             files,
-            show_hidden: false,
+            show_hidden,
         }
     }
-
-    // fn sort(&mut self) {
-    // }
 
     pub fn next(&mut self) {
         let i = match self.state.selected() {
             Some(i) => {
+                // TODO: selection makes no sense
+                /* if i < self.files.len() - 1 {
+                    let mut inc = i + 1;
+                    while !self.show_hidden && self.files.get(inc).unwrap().is_hidden {
+                        inc += 1;
+                    }
+                    inc
+                } else {
+                    0
+                } */
                 if i >= self.files.len() - 1 {
                     0
                 } else {
@@ -62,14 +106,44 @@ impl Dir {
         self.state.select(Some(i));
     }
 
-    pub fn get_selected_contents(&self) -> String {
+    pub fn get_selected_file(&self) -> Option<&File> {
         match self.state.selected() {
-            Some(i) => self.files.get(i).unwrap().get_contents(),
-            None => "".to_string(),
+            Some(i) => self.files.get(i),
+            None => None,
         }
     }
 
-    pub fn to_tui_list(&self) -> List<'static> {
+    pub fn render_with_query<B: Backend>(&mut self, f: &mut Frame<B>, query: &str, rect: Rect) {
+        let mut lines: Vec<(f64, ListItem)> = Vec::new();
+        for file in &self.files {
+            match file.display_with_query(query) {
+                Some((score, span)) => {
+                    let mut style = Style::default();
+                    if file.is_dir {
+                        style = style.fg(Color::LightBlue);
+                    }
+                    lines.push((score, ListItem::new(span).style(style)));
+                }
+                None => {}
+            }
+        }
+
+        // sort by scores
+        lines.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+
+        let list = List::new(
+            lines
+                .iter()
+                .map(|l| l.1.to_owned())
+                .collect::<Vec<ListItem>>(),
+        )
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
+        // .highlight_symbol(">");
+
+        f.render_stateful_widget(list, rect, &mut self.state);
+    }
+
+    pub fn render<B: Backend>(&mut self, f: &mut Frame<B>, stateful: bool, rect: Rect) {
         let files: Vec<ListItem> = self
             .files
             .iter()
@@ -82,10 +156,14 @@ impl Dir {
                 ListItem::new(f.name.to_owned()).style(style)
             })
             .collect();
-        List::new(files).highlight_style(
-            Style::default()
-                .bg(Color::LightBlue)
-                .add_modifier(Modifier::BOLD),
-        )
+        let list = List::new(files)
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
+        // .highlight_symbol(">");
+
+        if stateful {
+            f.render_stateful_widget(list, rect, &mut self.state);
+        } else {
+            f.render_widget(list, rect);
+        }
     }
 }

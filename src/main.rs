@@ -1,22 +1,17 @@
+use crate::fs::tree::{Mode, Tree};
+
+mod finder;
 mod fs;
-use crate::fs::tree::Tree;
 
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{
-    error::Error,
-    io,
-    time::{Duration, Instant},
-};
+use std::{error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
-    layout::{Constraint, Direction, Layout},
-    text::Span,
-    widgets::Paragraph,
-    Frame, Terminal,
+    Terminal,
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -28,9 +23,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     // create app and run it
-    let tick_rate = Duration::from_millis(250);
     let app = Tree::new();
-    let res = run_app(&mut terminal, app, tick_rate);
+    let res = run_app(&mut terminal, app);
 
     // restore terminal
     disable_raw_mode()?;
@@ -48,56 +42,51 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    mut app: Tree,
-    tick_rate: Duration,
-) -> io::Result<()> {
-    let mut last_tick = Instant::now();
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tree) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, &mut app))?;
+        terminal.draw(|f| app.render(f))?;
 
-        let timeout = tick_rate
-            .checked_sub(last_tick.elapsed())
-            .unwrap_or_else(|| Duration::from_secs(0));
-        if crossterm::event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
-                match key.code {
+        if let Event::Key(key) = event::read()? {
+            match app.mode {
+                Mode::NORMAL => match key.code {
+                    // modes
                     KeyCode::Char('q') => return Ok(()),
-                    // should go up one dir
-                    // KeyCode::Left | KeyCode::Char('h') => app.cwd.unselect(),
+                    KeyCode::Char('/') => {
+                        app.mode = Mode::SEARCH;
+                        // select the first item
+                        app.cwd.state.select(Some(0))
+                    }
+                    KeyCode::Char('H') => app.toggle_show_hidden(),
+                    // motion
+                    KeyCode::Left | KeyCode::Char('h') => app.cd_up(),
                     KeyCode::Down | KeyCode::Char('j') => app.cwd.next(),
                     KeyCode::Up | KeyCode::Char('k') => app.cwd.previous(),
-                    KeyCode::Char('H') => app.cwd.show_hidden = !app.cwd.show_hidden,
+                    KeyCode::Right | KeyCode::Char('l') => app.cd_down(),
                     _ => {}
-                }
+                },
+                Mode::SEARCH => match key.code {
+                    KeyCode::Char(c) => {
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            match c {
+                                'n' => app.cwd.next(),
+                                'p' => app.cwd.previous(),
+                                _ => {}
+                            }
+                        } else {
+                            app.query.push(c)
+                        }
+                    }
+                    // KeyCode::Enter => {app.cwd.files}
+                    KeyCode::Backspace => {
+                        app.query.pop();
+                    }
+                    KeyCode::Esc => {
+                        app.query = String::new();
+                        app.mode = Mode::NORMAL;
+                    }
+                    _ => {}
+                },
             }
         }
-        if last_tick.elapsed() >= tick_rate {
-            // app.on_tick();
-            last_tick = Instant::now();
-        }
     }
-}
-
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut Tree) {
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .margin(1)
-        .constraints(
-            [
-                Constraint::Percentage(20),
-                Constraint::Percentage(30),
-                Constraint::Percentage(50),
-            ]
-            .as_ref(),
-        )
-        .split(f.size());
-
-    f.render_widget(app.parent.to_tui_list(), chunks[0]);
-    f.render_stateful_widget(app.cwd.to_tui_list(), chunks[1], &mut app.cwd.state);
-    f.render_widget(
-        Paragraph::new(Span::raw(app.cwd.get_selected_contents())),
-        chunks[2],
-    );
 }
