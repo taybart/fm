@@ -1,38 +1,11 @@
-// taken from: https://github.com/stewart/rff
-
-// A port of fzy's scoring algorithm.
 // fzy (c) 2014 John Hawthorn
+// rff (c) 2017 Andrew Stewart
 // Licensed under the MIT license
-// https://github.com/jhawthorn/fzy
+// https://github.com/stewart/rff
 
 use super::consts::*;
 use super::matcher::eq;
 use super::matrix::Matrix;
-
-pub fn score(needle: &str, haystack: &str) -> f64 {
-    let needle_length = needle.chars().count();
-
-    // empty needle
-    if needle_length == 0 {
-        return SCORE_MIN;
-    }
-
-    let haystack_length = haystack.chars().count();
-
-    // perfect match
-    if needle_length == haystack_length {
-        return SCORE_MAX;
-    }
-
-    // unreasonably large haystack
-    if haystack_length > 1024 {
-        return SCORE_MIN;
-    }
-
-    let (_, m) = calculate_score(needle, needle_length, haystack, haystack_length);
-
-    m[(needle_length - 1, haystack_length - 1)]
-}
 
 pub fn score_with_positions(needle: &str, haystack: &str) -> (f64, Vec<usize>) {
     let needle_length = needle.chars().count();
@@ -181,48 +154,6 @@ fn bonus_for_prev(ch: char) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_score_basic() {
-        assert_eq!(score("", "asdf"), SCORE_MIN);
-        assert_eq!(score("asdf", "asdf"), SCORE_MAX);
-
-        let huge_string = "X".repeat(1025);
-        assert_eq!(score("asdf", &huge_string), SCORE_MIN);
-    }
-
-    #[test]
-    fn relative_scores() {
-        // App/Models/Order is better than App/MOdels/zRder
-        assert!(score("amor", "app/models/order") > score("amor", "app/models/zrder"));
-
-        // App/MOdels/foo is better than App/M/fOo
-        assert!(score("amo", "app/m/foo") < score("amo", "app/models/foo"));
-
-        // GEMFIle.Lock < GEMFILe
-        assert!(score("gemfil", "Gemfile.lock") < score("gemfil", "Gemfile"));
-
-        // GEMFIle.Lock < GEMFILe
-        assert!(score("gemfil", "Gemfile.lock") < score("gemfil", "Gemfile"));
-
-        // Prefer shorter scorees
-        assert!(score("abce", "abcdef") > score("abce", "abc de"));
-
-        // Prefer shorter candidates
-        assert!(score("test", "tests") > score("test", "testing"));
-
-        // Scores first letter highly
-        assert!(score("test", "testing") > score("test", "/testing"));
-
-        // Prefer shorter scorees
-        assert!(score("abc", "    a b c ") > score("abc", " a  b  c "));
-        assert!(score("abc", " a b c    ") > score("abc", " a  b  c "));
-    }
-
-    #[test]
-    fn score_utf8() {
-        assert_eq!(score("ß", "öäßéè"), -0.02);
-    }
 
     #[test]
     fn test_compute_bonus() {

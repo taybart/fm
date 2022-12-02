@@ -53,29 +53,29 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tree) -> io::Result<
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('/') => {
                         app.mode = Mode::SEARCH;
-                        // select the first item
-                        app.cwd.state.select(Some(0))
+                        app.cwd().state.select(Some(0))
                     }
                     KeyCode::Char('H') => app.toggle_show_hidden(),
                     // motion
-                    KeyCode::Left | KeyCode::Char('h') => app.cd_up(),
-                    KeyCode::Down | KeyCode::Char('j') => app.cwd.next(),
-                    KeyCode::Up | KeyCode::Char('k') => app.cwd.previous(),
-                    KeyCode::Right | KeyCode::Char('l') => app.cd_down(),
+                    KeyCode::Left | KeyCode::Char('h') => app.cd_parent(),
+                    KeyCode::Down | KeyCode::Char('j') => app.cwd().next(),
+                    KeyCode::Up | KeyCode::Char('k') => app.cwd().previous(),
+                    KeyCode::Right | KeyCode::Char('l') => app.cd_selected(),
                     _ => {}
                 },
                 Mode::SEARCH => match key.code {
                     KeyCode::Char(c) => {
                         if key.modifiers == KeyModifiers::CONTROL {
                             match c {
-                                'n' => app.cwd.next(),
-                                'p' => app.cwd.previous(),
+                                'n' => app.cwd().next(),
+                                'p' => app.cwd().previous(),
                                 _ => {}
                             }
                         } else {
                             app.query.push(c)
                         }
                     }
+                    // this should cd into directories and open files in EDITOR
                     // KeyCode::Enter => {app.cwd.files}
                     KeyCode::Backspace => {
                         app.query.pop();

@@ -1,6 +1,7 @@
 use super::file::File;
 
-use std::fs::read_dir;
+use std::fs::{canonicalize, read_dir};
+use std::path::PathBuf;
 
 use tui::{
     backend::Backend,
@@ -10,33 +11,19 @@ use tui::{
     Frame,
 };
 
-struct State {
-    state: ListState,
-}
+// pub struct DirState {
+//     pub path: PathBuf,
+//     pub selected: usize,
+//     pub files: Vec<File>,
+// }
 
-impl State {
-    pub fn new() -> State {
-        State {
-            state: ListState::default(),
-        }
-    }
-    pub fn select(&mut self, index: Option<usize>) {
-        self.state.select(index);
-    }
-    pub fn selected(&self) -> Option<usize> {
-        self.state.selected()
-    }
-    // pub fn get(&self) -> ListState {
-    //     // self.state
-    // }
-}
-
+#[derive(Clone)]
 pub struct Dir {
     pub state: ListState,
-    // pub search_state: ListState,
     pub files: Vec<File>,
     pub visible_files: Vec<File>,
     pub show_hidden: bool,
+    pub path: PathBuf,
 }
 
 impl Dir {
@@ -55,6 +42,8 @@ impl Dir {
 
         files.sort_by(|a, b| a.name.cmp(&b.name));
 
+        let path = canonicalize(PathBuf::from(dir_name)).expect("could not canonicalize directory");
+
         let mut state = ListState::default();
         state.select(Some(0));
         // let mut search_state = ListState::default();
@@ -65,6 +54,7 @@ impl Dir {
             visible_files: files.clone(),
             files,
             show_hidden,
+            path,
         }
     }
 

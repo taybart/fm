@@ -19,16 +19,12 @@ impl File {
         let path = file.path();
         let metadata = metadata(path.clone()).unwrap();
 
-        // we just want a displayable string
-        let name = path
+        let name = file
             .file_name()
-            .unwrap()
-            .to_owned()
-            .to_str()
-            .unwrap()
-            .to_owned();
+            .into_string()
+            .expect("convert file os string to str");
 
-        let is_hidden = name.clone().starts_with('.');
+        let is_hidden = name.starts_with('.');
         File {
             name,
             is_dir: metadata.is_dir(),
@@ -39,7 +35,7 @@ impl File {
 
     /// formats the file name with matched letters highlighted
     pub fn display_with_query(&self, query: &str) -> Option<(f64, Spans)> {
-        match match_and_score_with_positions(query, self.name.as_str()) {
+        match match_and_score_with_positions(query, &self.name) {
             Some(mut matches) => {
                 let mut texts = Vec::new();
                 let mut string = "".to_string();
@@ -67,6 +63,9 @@ impl File {
     }
 
     pub fn get_contents(&self) -> String {
-        read_to_string(&self.name).expect("unable to read the file")
+        // read_to_string(&self.name).expect(format!("unable to read the file {}", self.name).as_str())
+        read_to_string(&self.name)
+            .or::<String>(Ok(String::from("")))
+            .unwrap()
     }
 }
