@@ -78,6 +78,16 @@ impl Dir {
         self.state.select(Some(i));
     }
 
+    pub fn index_by_name(&self, name: String, show_hidden: bool) -> usize {
+        let visible = self.get_visible(show_hidden);
+        for (i, f) in visible.iter().enumerate() {
+            if name == f.name {
+                return i;
+            }
+        }
+        0
+    }
+
     fn get_visible(&self, show_hidden: bool) -> Vec<File> {
         let visible = self.files.clone();
 

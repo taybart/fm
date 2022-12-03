@@ -62,6 +62,8 @@ impl Tree {
     }
 
     pub fn cd_parent(&mut self) {
+        let init_parent_path = Tree::cwd_path().expect("could not canonicalize parent path");
+
         env::set_current_dir(Path::new("..")).unwrap();
         let parent_path = Tree::parent_path().expect("could not canonicalize parent path");
 
@@ -71,7 +73,18 @@ impl Tree {
         let cwd_path = Tree::cwd_path().expect("could not canonicalize cwd path");
         self.fs_tree
             .entry(cwd_path.clone())
-            .or_insert(Dir::new(cwd_path).unwrap());
+            .or_insert(Dir::new(cwd_path.clone()).unwrap());
+        let cwd = self.fs_tree.get_mut(&cwd_path).unwrap();
+        let idx = cwd.index_by_name(
+            init_parent_path
+                .file_name()
+                .unwrap()
+                .to_os_string()
+                .into_string()
+                .unwrap(),
+            self.show_hidden,
+        );
+        cwd.state.select(Some(idx));
     }
     pub fn cd_selected(&mut self) {
         let show_hidden = self.show_hidden;
