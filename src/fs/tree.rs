@@ -24,19 +24,19 @@ pub struct Tree {
     fs_tree: HashMap<PathBuf, Dir>,
     pub show_hidden: bool,
     pub mode: Mode,
-    // pub parent: Dir,
-    // pub cwd: Dir,
     pub query: String,
 }
 
 impl Tree {
     pub fn new() -> Tree {
         let show_hidden = true;
-        let parent = Dir::new("..", show_hidden);
-        let cwd = Dir::new(".", show_hidden);
+        let parent = Dir::new(Tree::parent_path().expect("parent path idk")).unwrap();
+        let cwd = Dir::new(Tree::cwd_path().expect("cwd path idk")).unwrap();
+
         let mut fs_tree: HashMap<PathBuf, Dir> = HashMap::new();
         fs_tree.insert(parent.path.clone(), parent.clone());
         fs_tree.insert(cwd.path.clone(), cwd.clone());
+
         Tree {
             fs_tree,
             mode: Mode::NORMAL,
@@ -45,41 +45,46 @@ impl Tree {
         }
     }
 
+    pub fn parent_path() -> Result<PathBuf, std::io::Error> {
+        fs::canonicalize(Path::new(".."))
+    }
+    pub fn cwd_path() -> Result<PathBuf, std::io::Error> {
+        fs::canonicalize(Path::new("."))
+    }
+
     pub fn parent(&mut self) -> &mut Dir {
-        let parent_path =
-            fs::canonicalize(Path::new("..")).expect("could not canonicalize parent path");
+        let parent_path = Tree::parent_path().expect("could not canonicalize parent path");
         self.fs_tree.get_mut(&parent_path).unwrap()
     }
     pub fn cwd(&mut self) -> &mut Dir {
         let cwd_path = fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
         self.fs_tree.get_mut(&cwd_path).unwrap()
     }
+
     pub fn cd_parent(&mut self) {
         env::set_current_dir(Path::new("..")).unwrap();
-        let parent_path =
-            fs::canonicalize(Path::new("..")).expect("could not canonicalize parentpath");
-        // TODO: switch to entry().or_insert()
-        if !self.fs_tree.contains_key(&parent_path) {
-            self.fs_tree
-                .insert(parent_path, Dir::new("..", self.show_hidden));
-        }
-        let cwd_path = fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
-        if !self.fs_tree.contains_key(&cwd_path) {
-            self.fs_tree
-                .insert(cwd_path, Dir::new(".", self.show_hidden));
-        }
+        let parent_path = Tree::parent_path().expect("could not canonicalize parent path");
+
+        self.fs_tree
+            .entry(parent_path.clone())
+            .or_insert(Dir::new(parent_path).unwrap());
+        let cwd_path = Tree::cwd_path().expect("could not canonicalize cwd path");
+        self.fs_tree
+            .entry(cwd_path.clone())
+            .or_insert(Dir::new(cwd_path).unwrap());
     }
     pub fn cd_selected(&mut self) {
-        match self.cwd().get_selected_file() {
+        let show_hidden = self.show_hidden;
+        match self.cwd().get_selected_file(show_hidden) {
             Some(selected) => {
                 if selected.is_dir {
                     env::set_current_dir(Path::new(&selected.name)).unwrap();
                     let cwd_path =
                         fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
-                    if !self.fs_tree.contains_key(&cwd_path) {
-                        self.fs_tree
-                            .insert(cwd_path, Dir::new(".", self.show_hidden));
-                    }
+
+                    self.fs_tree
+                        .entry(cwd_path.clone())
+                        .or_insert(Dir::new(cwd_path).unwrap());
                 }
             }
             None => {}
@@ -90,10 +95,11 @@ impl Tree {
         self.show_hidden = !self.show_hidden;
     }
 
-    pub fn render<B: Backend>(&mut self, f: &mut Frame<B>) {
+    pub fn render<B: Backend>(&mut self, f: &mut Frame<B>) -> Result<(), String> {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .margin(1)
+            .vertical_margin(1)
+            .horizontal_margin(3)
             .constraints(
                 [
                     Constraint::Percentage(20),
@@ -104,31 +110,35 @@ impl Tree {
             )
             .split(f.size());
 
-        self.parent().render(f, false, chunks[0]);
-        if self.mode == Mode::SEARCH {
-            // f.render_widget(self.cwd.display_with_query(&self.query.clone()), chunks[1]);
-            let query = self.query.clone();
-            self.cwd().render_with_query(f, &query, chunks[1]);
-            f.render_widget(
-                Paragraph::new(Text::raw(format!("> {}", &self.query.clone())))
-                    .style(Style::default().add_modifier(Modifier::UNDERLINED)),
-                Rect::new(chunks[1].x + 1, f.size().height - 1, chunks[1].width, 1),
-            );
-            f.set_cursor(
-                // TODO: add constants for offsets?
-                // Put cursor past the end of the input text
-                chunks[1].x + self.query.len() as u16 + 3,
-                f.size().height,
-            )
-        } else {
-            self.cwd().render(f, true, chunks[1]);
-        }
-
         let show_hidden = self.show_hidden;
-        match self.cwd().get_selected_file() {
+        self.parent().render(f, false, chunks[0], show_hidden);
+        match self.mode {
+            Mode::SEARCH => {
+                let query = self.query.clone();
+                self.cwd()
+                    .render_with_query(f, &query, chunks[1], show_hidden);
+                f.render_widget(
+                    Paragraph::new(Text::raw(format!("> {}", &self.query.clone())))
+                        .style(Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Rect::new(chunks[1].x + 1, f.size().height - 1, chunks[1].width, 1),
+                );
+                f.set_cursor(
+                    // TODO: add constants for offsets?
+                    // Put cursor past the end of the input text
+                    chunks[1].x + self.query.len() as u16 + 3,
+                    f.size().height,
+                )
+            }
+            Mode::NORMAL => {
+                self.cwd().render(f, true, chunks[1], show_hidden);
+            }
+        };
+
+        match self.cwd().get_selected_file(show_hidden) {
             Some(selected) => {
                 if selected.is_dir {
-                    Dir::new(&selected.name, show_hidden).render(f, false, chunks[2]);
+                    // TODO: render messsage about perissions if that fails
+                    Dir::new(selected.path.clone())?.render(f, false, chunks[2], show_hidden);
                 } else {
                     f.render_widget(
                         Paragraph::new(Text::raw(selected.get_contents())),
@@ -138,5 +148,6 @@ impl Tree {
             }
             None => {}
         };
+        Ok(())
     }
 }

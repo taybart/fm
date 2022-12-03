@@ -1,5 +1,6 @@
 use crate::finder::match_and_score_with_positions;
 use std::fs::{metadata, read_to_string, DirEntry, Metadata};
+use std::path::PathBuf;
 
 use tui::{
     style::{Color, Style},
@@ -9,6 +10,7 @@ use tui::{
 #[derive(Clone)]
 pub struct File {
     pub name: String,
+    pub path: PathBuf,
     pub is_dir: bool,
     pub is_hidden: bool,
     pub metadata: Metadata,
@@ -27,6 +29,7 @@ impl File {
         let is_hidden = name.starts_with('.');
         File {
             name,
+            path,
             is_dir: metadata.is_dir(),
             is_hidden,
             metadata,
@@ -63,9 +66,8 @@ impl File {
     }
 
     pub fn get_contents(&self) -> String {
-        // read_to_string(&self.name).expect(format!("unable to read the file {}", self.name).as_str())
         read_to_string(&self.name)
-            .or::<String>(Ok(String::from("")))
+            .or::<String>(Ok("".to_string()))
             .unwrap()
     }
 }

@@ -11,67 +11,48 @@ use tui::{
     Frame,
 };
 
-// pub struct DirState {
-//     pub path: PathBuf,
-//     pub selected: usize,
-//     pub files: Vec<File>,
-// }
-
 #[derive(Clone)]
 pub struct Dir {
     pub state: ListState,
     pub files: Vec<File>,
     pub visible_files: Vec<File>,
-    pub show_hidden: bool,
+    // pub show_hidden: bool,
     pub path: PathBuf,
 }
 
 impl Dir {
-    pub fn new(dir_name: &str, show_hidden: bool) -> Dir {
+    pub fn new(dir_name: PathBuf) -> Result<Dir, String> {
         let mut files = Vec::new();
-        let dir = read_dir(dir_name).unwrap();
-        // should sort dir > files
-        for entry in dir {
-            let file = File::new(entry.unwrap());
-            if file.is_hidden && show_hidden {
-                files.push(file);
-            } else {
-                files.push(file);
+        match read_dir(dir_name.clone()) {
+            Ok(dir) => {
+                // should sort dir > files
+                for entry in dir {
+                    let file = File::new(entry.unwrap());
+                    files.push(file);
+                }
+
+                files.sort_by(|a, b| a.name.cmp(&b.name));
+
+                let path = canonicalize(dir_name).expect("could not canonicalize directory");
+
+                let mut state = ListState::default();
+                state.select(Some(0));
+                Ok(Dir {
+                    state,
+                    visible_files: files.clone(),
+                    files,
+                    path,
+                })
             }
-        }
-
-        files.sort_by(|a, b| a.name.cmp(&b.name));
-
-        let path = canonicalize(PathBuf::from(dir_name)).expect("could not canonicalize directory");
-
-        let mut state = ListState::default();
-        state.select(Some(0));
-        // let mut search_state = ListState::default();
-        // search_state.select(Some(0));
-        Dir {
-            state,
-            // search_state,
-            visible_files: files.clone(),
-            files,
-            show_hidden,
-            path,
+            Err(e) => Err(format!("could not read dir {dir_name:?}: {e}")),
         }
     }
 
-    pub fn next(&mut self) {
+    pub fn next(&mut self, show_hidden: bool) {
+        let visible = self.get_visible(show_hidden);
         let i = match self.state.selected() {
             Some(i) => {
-                // TODO: selection makes no sense
-                /* if i < self.files.len() - 1 {
-                    let mut inc = i + 1;
-                    while !self.show_hidden && self.files.get(inc).unwrap().is_hidden {
-                        inc += 1;
-                    }
-                    inc
-                } else {
-                    0
-                } */
-                if i >= self.files.len() - 1 {
+                if i >= visible.len() - 1 {
                     0
                 } else {
                     i + 1
@@ -82,11 +63,12 @@ impl Dir {
         self.state.select(Some(i));
     }
 
-    pub fn previous(&mut self) {
+    pub fn previous(&mut self, show_hidden: bool) {
+        let visible = self.get_visible(show_hidden);
         let i = match self.state.selected() {
             Some(i) => {
                 if i == 0 {
-                    self.files.len() - 1
+                    visible.len() - 1
                 } else {
                     i - 1
                 }
@@ -96,33 +78,51 @@ impl Dir {
         self.state.select(Some(i));
     }
 
-    pub fn get_selected_file(&self) -> Option<&File> {
+    fn get_visible(&self, show_hidden: bool) -> Vec<File> {
+        let visible = self.files.clone();
+
+        visible
+            .into_iter()
+            .filter(|x| if !show_hidden { !x.is_hidden } else { true })
+            .collect::<Vec<File>>()
+    }
+
+    pub fn get_selected_file(&self, show_hidden: bool) -> Option<File> {
+        let visible = self.get_visible(show_hidden);
         match self.state.selected() {
-            Some(i) => self.files.get(i),
+            Some(i) => visible.into_iter().nth(i),
             None => None,
         }
     }
 
-    pub fn render_with_query<B: Backend>(&mut self, f: &mut Frame<B>, query: &str, rect: Rect) {
-        let mut lines: Vec<(f64, ListItem)> = Vec::new();
-        for file in &self.files {
+    pub fn render_with_query<B: Backend>(
+        &mut self,
+        f: &mut Frame<B>,
+        query: &str,
+        rect: Rect,
+        show_hidden: bool,
+    ) {
+        let mut files: Vec<(f64, ListItem)> = Vec::new();
+
+        let visible = self.get_visible(show_hidden).to_owned();
+        for file in visible.iter() {
             match file.display_with_query(query) {
                 Some((score, span)) => {
                     let mut style = Style::default();
                     if file.is_dir {
                         style = style.fg(Color::LightBlue);
                     }
-                    lines.push((score, ListItem::new(span).style(style)));
+                    files.push((score, ListItem::new(span).style(style)));
                 }
                 None => {}
             }
         }
 
         // sort by scores
-        lines.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+        files.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
 
         let list = List::new(
-            lines
+            files
                 .iter()
                 .map(|l| l.1.to_owned())
                 .collect::<Vec<ListItem>>(),
@@ -133,11 +133,17 @@ impl Dir {
         f.render_stateful_widget(list, rect, &mut self.state);
     }
 
-    pub fn render<B: Backend>(&mut self, f: &mut Frame<B>, stateful: bool, rect: Rect) {
+    pub fn render<B: Backend>(
+        &mut self,
+        f: &mut Frame<B>,
+        stateful: bool,
+        rect: Rect,
+        show_hidden: bool,
+    ) {
         let files: Vec<ListItem> = self
             .files
             .iter()
-            .filter(|f| !f.is_hidden || self.show_hidden)
+            .filter(|f| !f.is_hidden || show_hidden)
             .map(|f| {
                 let mut style = Style::default();
                 if f.is_dir {
@@ -153,7 +159,7 @@ impl Dir {
         if stateful {
             f.render_stateful_widget(list, rect, &mut self.state);
         } else {
-            f.render_widget(list, rect);
+            f.render_widget(list.style(Style::default()), rect);
         }
     }
 }
