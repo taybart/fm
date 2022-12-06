@@ -1,13 +1,13 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-#[derive(PartialEq, Default)]
+#[derive(Default)]
 pub enum Mode {
     #[default]
-    NORMAL,
-    SEARCH,
-    COMMAND,
+    Normal,
+    Search,
+    Command,
 }
-#[derive(PartialEq, Default, Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub enum Command {
     #[default]
     Nop,
@@ -50,15 +50,15 @@ impl State {
     }
     pub fn handle_input(&mut self, key: KeyEvent) -> &mut State {
         match self.mode {
-            Mode::NORMAL => match key.code {
+            Mode::Normal => match key.code {
                 // modes
-                KeyCode::Esc | KeyCode::Char('q') => return self.exit(),
+                KeyCode::Esc | KeyCode::Char('q') => self.exit(),
                 KeyCode::Char(':') => {
-                    self.with_mode(Mode::COMMAND)
+                    self.with_mode(Mode::Command)
                     // self.cwd().state.select(Some(0))
                 }
                 KeyCode::Char('/') => {
-                    self.with_mode(Mode::SEARCH)
+                    self.with_mode(Mode::Search)
                     // self.cwd().state.select(Some(0))
                 }
                 KeyCode::Char('H') => {
@@ -73,13 +73,13 @@ impl State {
                 KeyCode::Right | KeyCode::Char('l') => self.with_command(Command::Selected),
                 _ => self,
             },
-            Mode::SEARCH => match key.code {
+            Mode::Search => match key.code {
                 KeyCode::Char(c) => {
                     if key.modifiers == KeyModifiers::CONTROL {
                         match c {
                             'c' => {
                                 self.command_string = String::new();
-                                self.with_mode(Mode::NORMAL)
+                                self.with_mode(Mode::Normal)
                             }
                             _ => self,
                         }
@@ -92,7 +92,7 @@ impl State {
                 KeyCode::Enter => {
                     // TODO: select file not just exit
                     self.command_string = String::new();
-                    self.with_mode(Mode::NORMAL)
+                    self.with_mode(Mode::Normal)
                 }
                 KeyCode::Backspace => {
                     self.command_string.pop();
@@ -100,19 +100,19 @@ impl State {
                 }
                 KeyCode::Esc => {
                     self.command_string = String::new();
-                    self.with_mode(Mode::NORMAL)
+                    self.with_mode(Mode::Normal)
                 }
                 _ => self,
             },
-            Mode::COMMAND => match key.code {
-                KeyCode::Esc | KeyCode::Char('q') => return self.exit(),
+            Mode::Command => match key.code {
+                KeyCode::Esc | KeyCode::Char('q') => self.exit(),
 
                 KeyCode::Char(c) => {
                     if key.modifiers == KeyModifiers::CONTROL {
                         match c {
                             'c' => {
                                 self.command_string = String::new();
-                                self.with_mode(Mode::NORMAL)
+                                self.with_mode(Mode::Normal)
                             }
                             _ => self,
                         }

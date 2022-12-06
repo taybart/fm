@@ -28,8 +28,8 @@ impl Tree {
         let cwd = Dir::new(Tree::cwd_path().expect("cwd path idk")).unwrap();
 
         let mut fs_tree: HashMap<PathBuf, Dir> = HashMap::new();
-        fs_tree.insert(parent.path.clone(), parent.clone());
-        fs_tree.insert(cwd.path.clone(), cwd.clone());
+        fs_tree.insert(parent.path.clone(), parent);
+        fs_tree.insert(cwd.path.clone(), cwd);
 
         let state = State::default();
 
@@ -60,11 +60,11 @@ impl Tree {
 
         self.fs_tree
             .entry(parent_path.clone())
-            .or_insert(Dir::new(parent_path).unwrap());
+            .or_insert_with(|| Dir::new(parent_path).unwrap());
         let cwd_path = Tree::cwd_path().expect("could not canonicalize cwd path");
         self.fs_tree
             .entry(cwd_path.clone())
-            .or_insert(Dir::new(cwd_path.clone()).unwrap());
+            .or_insert_with(|| Dir::new(cwd_path.clone()).unwrap());
         let cwd = self.fs_tree.get_mut(&cwd_path).unwrap();
         let idx = cwd.index_by_name(
             init_parent_path
@@ -79,19 +79,16 @@ impl Tree {
     }
     pub fn cd_selected(&mut self) {
         let show_hidden = self.state.show_hidden;
-        match self.cwd().get_selected_file(show_hidden) {
-            Some(selected) => {
-                if selected.is_dir {
-                    env::set_current_dir(Path::new(&selected.name)).unwrap();
-                    let cwd_path =
-                        fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
+        if let Some(selected) = self.cwd().get_selected_file(show_hidden) {
+            if selected.is_dir {
+                env::set_current_dir(Path::new(&selected.name)).unwrap();
+                let cwd_path =
+                    fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
 
-                    self.fs_tree
-                        .entry(cwd_path.clone())
-                        .or_insert(Dir::new(cwd_path).unwrap());
-                }
+                self.fs_tree
+                    .entry(cwd_path.clone())
+                    .or_insert_with(|| Dir::new(cwd_path).unwrap());
             }
-            None => {}
         }
     }
 
@@ -120,7 +117,7 @@ impl Tree {
          * middle column
          */
         match self.state.mode {
-            Mode::SEARCH => {
+            Mode::Search => {
                 let query = self.state.command_string.clone();
                 self.cwd()
                     .render_with_query(f, &query, chunks[1], show_hidden);
@@ -136,10 +133,10 @@ impl Tree {
                     f.size().height,
                 )
             }
-            Mode::NORMAL => {
+            Mode::Normal => {
                 self.cwd().render(f, true, chunks[1], show_hidden);
             }
-            Mode::COMMAND => {
+            Mode::Command => {
                 f.render_widget(
                     Paragraph::new(Text::raw(format!(
                         ":{}",
@@ -160,19 +157,16 @@ impl Tree {
         /*
          * right column
          */
-        match self.cwd().get_selected_file(show_hidden) {
-            Some(selected) => {
-                if selected.is_dir {
-                    // TODO: render messsage about perissions if that fails
-                    Dir::new(selected.path.clone())?.render(f, false, chunks[2], show_hidden);
-                } else {
-                    f.render_widget(
-                        Paragraph::new(Text::raw(selected.get_contents())),
-                        chunks[2],
-                    );
-                }
+        if let Some(selected) = self.cwd().get_selected_file(show_hidden) {
+            if selected.is_dir {
+                // TODO: render messsage about perissions if that fails
+                Dir::new(selected.path)?.render(f, false, chunks[2], show_hidden);
+            } else {
+                f.render_widget(
+                    Paragraph::new(Text::raw(selected.get_contents())),
+                    chunks[2],
+                );
             }
-            None => {}
         };
         Ok(())
     }

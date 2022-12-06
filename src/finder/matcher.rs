@@ -7,7 +7,7 @@
 /// ```
 #[inline]
 pub fn matches(needle: &str, haystack: &str) -> bool {
-    if needle == "" {
+    if needle.is_empty() {
         return true;
     }
 

@@ -44,7 +44,7 @@ impl File {
                 let mut string = "".to_string();
                 for (i, c) in matches.1.chars().enumerate() {
                     // is this character a matched character?
-                    if matches.2.len() > 0 && i == matches.2[0] {
+                    if matches.2.is_empty() && i == matches.2[0] {
                         texts.push(Span::raw(string.clone()));
                         string = "".to_string();
                         matches.2.remove(0);
@@ -66,8 +66,6 @@ impl File {
     }
 
     pub fn get_contents(&self) -> String {
-        read_to_string(&self.name)
-            .or::<String>(Ok("".to_string()))
-            .unwrap()
+        read_to_string(&self.name).unwrap_or_else(|_| "".to_string())
     }
 }

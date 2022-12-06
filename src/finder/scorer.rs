@@ -28,14 +28,14 @@ pub fn score_with_positions(needle: &str, haystack: &str) -> (f64, Vec<usize>) {
     }
 
     let (d, m) = calculate_score(needle, needle_length, haystack, haystack_length);
-    let mut positions = vec![0 as usize; needle_length];
+    let mut positions = vec![0_usize; needle_length];
 
     {
         let mut match_required = false;
         let mut j = haystack_length - 1;
 
         for i in (0..needle_length).rev() {
-            while j > (0 as usize) {
+            while j > (0_usize) {
                 let last = if i > 0 && j > 0 {
                     d[(i - 1, j - 1)]
                 } else {

@@ -114,17 +114,14 @@ impl Dir {
     ) {
         let mut files: Vec<(f64, ListItem)> = Vec::new();
 
-        let visible = self.get_visible(show_hidden).to_owned();
+        let visible = self.get_visible(show_hidden);
         for file in visible.iter() {
-            match file.display_with_query(query) {
-                Some((score, span)) => {
-                    let mut style = Style::default();
-                    if file.is_dir {
-                        style = style.fg(Color::LightBlue);
-                    }
-                    files.push((score, ListItem::new(span).style(style)));
+            if let Some((score, span)) = file.display_with_query(query) {
+                let mut style = Style::default();
+                if file.is_dir {
+                    style = style.fg(Color::LightBlue);
                 }
-                None => {}
+                files.push((score, ListItem::new(span).style(style)));
             }
         }
 
