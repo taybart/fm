@@ -1,9 +1,12 @@
 use super::dir::Dir;
+use super::state::{Command, Mode, State};
 use std::{
     collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
 };
+
+use crossterm::event::KeyEvent;
 
 use tui::{
     backend::Backend,
@@ -14,22 +17,13 @@ use tui::{
     Frame,
 };
 
-#[derive(PartialEq)]
-pub enum Mode {
-    NORMAL,
-    SEARCH,
-}
-
 pub struct Tree {
     fs_tree: HashMap<PathBuf, Dir>,
-    pub show_hidden: bool,
-    pub mode: Mode,
-    pub query: String,
+    pub state: State,
 }
 
 impl Tree {
     pub fn new() -> Tree {
-        let show_hidden = true;
         let parent = Dir::new(Tree::parent_path().expect("parent path idk")).unwrap();
         let cwd = Dir::new(Tree::cwd_path().expect("cwd path idk")).unwrap();
 
@@ -37,12 +31,9 @@ impl Tree {
         fs_tree.insert(parent.path.clone(), parent.clone());
         fs_tree.insert(cwd.path.clone(), cwd.clone());
 
-        Tree {
-            fs_tree,
-            mode: Mode::NORMAL,
-            query: String::new(),
-            show_hidden,
-        }
+        let state = State::default();
+
+        Tree { fs_tree, state }
     }
 
     pub fn parent_path() -> Result<PathBuf, std::io::Error> {
@@ -82,12 +73,12 @@ impl Tree {
                 .to_os_string()
                 .into_string()
                 .unwrap(),
-            self.show_hidden,
+            self.state.show_hidden,
         );
         cwd.state.select(Some(idx));
     }
     pub fn cd_selected(&mut self) {
-        let show_hidden = self.show_hidden;
+        let show_hidden = self.state.show_hidden;
         match self.cwd().get_selected_file(show_hidden) {
             Some(selected) => {
                 if selected.is_dir {
@@ -102,10 +93,6 @@ impl Tree {
             }
             None => {}
         }
-    }
-
-    pub fn toggle_show_hidden(&mut self) {
-        self.show_hidden = !self.show_hidden;
     }
 
     pub fn render<B: Backend>(&mut self, f: &mut Frame<B>) -> Result<(), String> {
@@ -123,30 +110,56 @@ impl Tree {
             )
             .split(f.size());
 
-        let show_hidden = self.show_hidden;
+        let show_hidden = self.state.show_hidden;
+        /*
+         * Left column
+         */
         self.parent().render(f, false, chunks[0], show_hidden);
-        match self.mode {
+
+        /*
+         * middle column
+         */
+        match self.state.mode {
             Mode::SEARCH => {
-                let query = self.query.clone();
+                let query = self.state.command_string.clone();
                 self.cwd()
                     .render_with_query(f, &query, chunks[1], show_hidden);
                 f.render_widget(
-                    Paragraph::new(Text::raw(format!("> {}", &self.query.clone())))
+                    Paragraph::new(Text::raw(format!("> {}", &query.clone())))
                         .style(Style::default().add_modifier(Modifier::UNDERLINED)),
                     Rect::new(chunks[1].x + 1, f.size().height - 1, chunks[1].width, 1),
                 );
                 f.set_cursor(
                     // TODO: add constants for offsets?
                     // Put cursor past the end of the input text
-                    chunks[1].x + self.query.len() as u16 + 3,
+                    chunks[1].x + query.len() as u16 + 3,
                     f.size().height,
                 )
             }
             Mode::NORMAL => {
                 self.cwd().render(f, true, chunks[1], show_hidden);
             }
+            Mode::COMMAND => {
+                f.render_widget(
+                    Paragraph::new(Text::raw(format!(
+                        ":{}",
+                        &self.state.command_string.clone()
+                    )))
+                    .style(Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Rect::new(chunks[0].x + 1, f.size().height - 1, chunks[1].width, 1),
+                );
+                f.set_cursor(
+                    // TODO: add constants for offsets?
+                    // Put cursor past the end of the input text
+                    chunks[0].x + self.state.command_string.len() as u16 + 2,
+                    f.size().height,
+                )
+            }
         };
 
+        /*
+         * right column
+         */
         match self.cwd().get_selected_file(show_hidden) {
             Some(selected) => {
                 if selected.is_dir {
@@ -162,5 +175,19 @@ impl Tree {
             None => {}
         };
         Ok(())
+    }
+
+    pub fn handle_input(&mut self, key: KeyEvent) -> bool {
+        let show_hidden = self.state.show_hidden;
+        match self.state.handle_input(key).command {
+            Command::Parent => self.cd_parent(),
+            Command::Selected => self.cd_selected(),
+            Command::Up => self.cwd().next(show_hidden),
+            Command::Down => self.cwd().previous(show_hidden),
+            Command::Nop => {
+                return self.state.exit;
+            }
+        };
+        self.state.exit
     }
 }
