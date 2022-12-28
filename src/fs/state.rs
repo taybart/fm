@@ -1,6 +1,6 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-#[derive(Default)]
+#[derive(Default, Eq, PartialEq)]
 pub enum Mode {
     #[default]
     Normal,
@@ -15,12 +15,14 @@ pub enum Command {
     Selected,
     Up,
     Down,
+    Edit,
 }
 
 #[derive(Default)]
 pub struct State {
     pub show_hidden: bool,
     pub command: Command,
+    pub query_string: String,
     pub command_string: String,
     pub mode: Mode,
     pub exit: bool,
@@ -48,7 +50,12 @@ impl State {
         self.command = cmd;
         self
     }
+
+    pub fn reset_command(&mut self) {
+        self.query_string = String::new();
+    }
     pub fn handle_input(&mut self, key: KeyEvent) -> &mut State {
+        self.command = Command::Nop;
         match self.mode {
             Mode::Normal => match key.code {
                 // modes
@@ -57,10 +64,7 @@ impl State {
                     self.with_mode(Mode::Command)
                     // self.cwd().state.select(Some(0))
                 }
-                KeyCode::Char('/') => {
-                    self.with_mode(Mode::Search)
-                    // self.cwd().state.select(Some(0))
-                }
+                KeyCode::Char('/') => self.with_mode(Mode::Search),
                 KeyCode::Char('H') => {
                     self.show_hidden = !self.show_hidden;
                     self
@@ -71,6 +75,7 @@ impl State {
                 KeyCode::Up | KeyCode::Char('k') => self.with_command(Command::Down),
                 // TODO: handle symlinks
                 KeyCode::Right | KeyCode::Char('l') => self.with_command(Command::Selected),
+                KeyCode::Enter => self.with_command(Command::Edit),
                 _ => self,
             },
             Mode::Search => match key.code {
@@ -78,28 +83,31 @@ impl State {
                     if key.modifiers == KeyModifiers::CONTROL {
                         match c {
                             'c' => {
-                                self.command_string = String::new();
+                                self.reset_command();
                                 self.with_mode(Mode::Normal)
                             }
+                            'n' => self.with_command(Command::Up),
+                            'p' => self.with_command(Command::Down),
                             _ => self,
                         }
                     } else {
-                        self.command_string.push(c);
+                        self.query_string.push(c);
                         self
                     }
                 }
                 // this should cd into directories and open files in EDITOR
                 KeyCode::Enter => {
                     // TODO: select file not just exit
-                    self.command_string = String::new();
-                    self.with_mode(Mode::Normal)
+                    // self.with_mode(Mode::Normal).with_command(Command::Edit)
+                    // crate::log::write("select".to_string());
+                    self.with_mode(Mode::Normal).with_command(Command::Selected)
                 }
                 KeyCode::Backspace => {
-                    self.command_string.pop();
+                    self.query_string.pop();
                     self
                 }
                 KeyCode::Esc => {
-                    self.command_string = String::new();
+                    self.reset_command();
                     self.with_mode(Mode::Normal)
                 }
                 _ => self,
@@ -111,13 +119,13 @@ impl State {
                     if key.modifiers == KeyModifiers::CONTROL {
                         match c {
                             'c' => {
-                                self.command_string = String::new();
+                                self.query_string = String::new();
                                 self.with_mode(Mode::Normal)
                             }
                             _ => self,
                         }
                     } else {
-                        self.command_string.push(c);
+                        self.query_string.push(c);
                         self
                     }
                 }

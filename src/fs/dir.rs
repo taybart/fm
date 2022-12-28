@@ -1,3 +1,5 @@
+use crate::finder::match_and_score;
+
 use super::file::File;
 
 use std::fs::{canonicalize, read_dir};
@@ -78,6 +80,22 @@ impl Dir {
         self.state.select(Some(i));
     }
 
+    pub fn ensure_selection(&mut self, show_hidden: bool, query: &str) {
+        let visible = self.get_visible_with_query(show_hidden, query);
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= visible.len() {
+                    visible.len() - 1
+                } else {
+                    i
+                }
+            }
+            None => 0,
+        };
+        crate::log::write(format!("idx {i}"));
+        self.state.select(Some(i));
+    }
+
     pub fn index_by_name(&self, name: String, show_hidden: bool) -> usize {
         let visible = self.get_visible(show_hidden);
         for (i, f) in visible.iter().enumerate() {
@@ -88,6 +106,22 @@ impl Dir {
         0
     }
 
+    fn get_visible_with_query(&self, show_hidden: bool, query: &str) -> Vec<File> {
+        let files = self.files.clone();
+
+        let hidden = files
+            .into_iter()
+            .filter(|x| if !show_hidden { !x.is_hidden } else { true })
+            .collect::<Vec<File>>();
+
+        let mut visible = vec![];
+        for file in hidden.into_iter() {
+            if let Some(_matches) = match_and_score(query, &file.name) {
+                visible.push(file);
+            }
+        }
+        visible
+    }
     fn get_visible(&self, show_hidden: bool) -> Vec<File> {
         let visible = self.files.clone();
 
@@ -97,8 +131,8 @@ impl Dir {
             .collect::<Vec<File>>()
     }
 
-    pub fn get_selected_file(&self, show_hidden: bool) -> Option<File> {
-        let visible = self.get_visible(show_hidden);
+    pub fn get_selected_file(&self, show_hidden: bool, query: &str) -> Option<File> {
+        let visible = self.get_visible_with_query(show_hidden, query);
         match self.state.selected() {
             Some(i) => visible.into_iter().nth(i),
             None => None,
@@ -114,7 +148,7 @@ impl Dir {
     ) {
         let mut files: Vec<(f64, ListItem)> = Vec::new();
 
-        let visible = self.get_visible(show_hidden);
+        let visible = self.get_visible_with_query(show_hidden, query);
         for file in visible.iter() {
             if let Some((score, span)) = file.display_with_query(query) {
                 let mut style = Style::default();

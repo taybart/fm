@@ -44,7 +44,7 @@ impl File {
                 let mut string = "".to_string();
                 for (i, c) in matches.1.chars().enumerate() {
                     // is this character a matched character?
-                    if matches.2.is_empty() && i == matches.2[0] {
+                    if !matches.2.is_empty() && i == matches.2[0] {
                         texts.push(Span::raw(string.clone()));
                         string = "".to_string();
                         matches.2.remove(0);
@@ -55,8 +55,10 @@ impl File {
                         string.push(c);
                     }
                 }
+
                 // the rest of the string
-                texts.push(Span::raw(format!("{} {}", string.clone(), matches.0)));
+                // texts.push(Span::raw(format!("{} {}", string.clone(), matches.0)));
+                texts.push(Span::raw(string.clone()));
 
                 // return score and formatted name
                 Some((matches.0, Spans::from(texts)))

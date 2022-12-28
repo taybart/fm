@@ -7,6 +7,31 @@ use super::consts::*;
 use super::matcher::eq;
 use super::matrix::Matrix;
 
+pub fn score(needle: &str, haystack: &str) -> f64 {
+    let needle_length = needle.chars().count();
+
+    // empty needle
+    if needle_length == 0 {
+        return SCORE_MIN;
+    }
+
+    let haystack_length = haystack.chars().count();
+
+    // perfect match
+    if needle_length == haystack_length {
+        return SCORE_MAX;
+    }
+
+    // unreasonably large haystack
+    if haystack_length > 1024 {
+        return SCORE_MIN;
+    }
+
+    let (_, m) = calculate_score(needle, needle_length, haystack, haystack_length);
+
+    m[(needle_length - 1, haystack_length - 1)]
+}
+
 pub fn score_with_positions(needle: &str, haystack: &str) -> (f64, Vec<usize>) {
     let needle_length = needle.chars().count();
 
