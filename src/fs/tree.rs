@@ -168,8 +168,11 @@ impl Tree {
             }
             Mode::Command => {
                 f.render_widget(
-                    Paragraph::new(Text::raw(format!(":{}", &self.state.query_string.clone())))
-                        .style(Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Paragraph::new(Text::raw(format!(
+                        ":{}",
+                        &self.state.command_string.clone()
+                    )))
+                    .style(Style::default().add_modifier(Modifier::UNDERLINED)),
                     Rect::new(chunks[0].x + 1, f.size().height - 1, chunks[1].width, 1),
                 );
                 f.set_cursor(
@@ -258,6 +261,7 @@ impl Tree {
                     if selected.is_dir {
                         self.cd_selected();
                     } else {
+                        return InputResult::Edit;
                     }
                     self.state.reset_command();
                 }

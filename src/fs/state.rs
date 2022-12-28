@@ -52,6 +52,9 @@ impl State {
     }
 
     pub fn reset_command(&mut self) {
+        self.command_string = String::new();
+    }
+    pub fn reset_query(&mut self) {
         self.query_string = String::new();
     }
     pub fn handle_input(&mut self, key: KeyEvent) -> &mut State {
@@ -83,7 +86,7 @@ impl State {
                     if key.modifiers == KeyModifiers::CONTROL {
                         match c {
                             'c' => {
-                                self.reset_command();
+                                self.reset_query();
                                 self.with_mode(Mode::Normal)
                             }
                             'n' => self.with_command(Command::Up),
@@ -119,13 +122,13 @@ impl State {
                     if key.modifiers == KeyModifiers::CONTROL {
                         match c {
                             'c' => {
-                                self.query_string = String::new();
+                                self.command_string = String::new();
                                 self.with_mode(Mode::Normal)
                             }
                             _ => self,
                         }
                     } else {
-                        self.query_string.push(c);
+                        self.command_string.push(c);
                         self
                     }
                 }

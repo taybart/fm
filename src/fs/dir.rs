@@ -82,6 +82,7 @@ impl Dir {
 
     pub fn ensure_selection(&mut self, show_hidden: bool, query: &str) {
         let visible = self.get_visible_with_query(show_hidden, query);
+        // crate::log::write(format!("{visible:?}"));
         let i = match self.state.selected() {
             Some(i) => {
                 if i >= visible.len() {
@@ -92,7 +93,7 @@ impl Dir {
             }
             None => 0,
         };
-        crate::log::write(format!("idx {i}"));
+        // crate::log::write(format!("idx {i}"));
         self.state.select(Some(i));
     }
 

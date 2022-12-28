@@ -7,7 +7,7 @@ use tui::{
     text::{Span, Spans},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct File {
     pub name: String,
     pub path: PathBuf,
