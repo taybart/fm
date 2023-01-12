@@ -1,15 +1,15 @@
-use fs::tree::Tree;
+use fm::FM;
 
 use std::error::Error;
 
 mod finder;
-mod fs;
+mod fm;
 mod log;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut app = Tree::new();
+    let mut fm = FM::new()?;
 
-    let res = app.run();
+    let res = fm.run();
 
     if let Err(err) = res {
         println!("{:?}", err)

@@ -1,5 +1,5 @@
 use crate::finder::match_and_score_with_positions;
-use std::fs::{metadata, read_to_string, DirEntry, Metadata};
+use std::fs::{metadata, read_to_string, symlink_metadata, DirEntry, Metadata};
 use std::path::PathBuf;
 
 use tui::{
@@ -12,28 +12,38 @@ pub struct File {
     pub name: String,
     pub path: PathBuf,
     pub is_dir: bool,
+    pub is_symlink: bool,
     pub is_hidden: bool,
     pub metadata: Metadata,
+    pub selected: bool,
 }
 
 impl File {
-    pub fn new(file: DirEntry) -> File {
+    pub fn new(file: DirEntry) -> Result<File, String> {
         let path = file.path();
-        let metadata = metadata(path.clone()).unwrap();
+        let metadata = metadata(path.clone()).map_err(|e| format!("{e} {path:?}"))?;
+        let sym_metadata = symlink_metadata(path.clone()).unwrap();
 
         let name = file
             .file_name()
             .into_string()
-            .expect("convert file os string to str");
+            .map_err(|e| format!("{e:?}"))?;
 
         let is_hidden = name.starts_with('.');
-        File {
+        Ok(File {
             name,
             path,
             is_dir: metadata.is_dir(),
+            is_symlink: sym_metadata.file_type().is_symlink(),
             is_hidden,
             metadata,
-        }
+            selected: false,
+        })
+    }
+
+    pub fn toggle_selected(&mut self) {
+        self.selected = !self.selected;
+        crate::log::write(format!("toggle {} {}", self.name, self.selected));
     }
 
     /// formats the file name with matched letters highlighted

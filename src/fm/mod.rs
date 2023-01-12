@@ -1,5 +1,8 @@
+pub mod fm;
 pub mod state;
-pub mod tree;
 
 pub mod dir;
 pub mod file;
+pub mod tree;
+
+pub use fm::FM;

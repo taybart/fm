@@ -1,8 +1,9 @@
 use crate::finder::match_and_score;
+use crate::log;
 
 use super::file::File;
 
-use std::fs::{canonicalize, read_dir};
+use std::fs::{canonicalize, read_dir, read_link};
 use std::path::PathBuf;
 
 use tui::{
@@ -17,8 +18,8 @@ use tui::{
 pub struct Dir {
     pub state: ListState,
     pub files: Vec<File>,
+    pub last_selection: usize,
     pub visible_files: Vec<File>,
-    // pub show_hidden: bool,
     pub path: PathBuf,
 }
 
@@ -27,10 +28,13 @@ impl Dir {
         let mut files = Vec::new();
         match read_dir(dir_name.clone()) {
             Ok(dir) => {
-                // should sort dir > files
                 for entry in dir {
-                    let file = File::new(entry.unwrap());
-                    files.push(file);
+                    match File::new(entry.unwrap()) {
+                        Ok(file) => {
+                            files.push(file);
+                        }
+                        Err(e) => log::error(e),
+                    }
                 }
 
                 files.sort_by(|a, b| a.name.cmp(&b.name));
@@ -42,6 +46,7 @@ impl Dir {
                 Ok(Dir {
                     state,
                     visible_files: files.clone(),
+                    last_selection: 0,
                     files,
                     path,
                 })
@@ -50,7 +55,7 @@ impl Dir {
         }
     }
 
-    pub fn next(&mut self, show_hidden: bool) {
+    pub fn down(&mut self, show_hidden: bool) {
         let visible = self.get_visible(show_hidden);
         let i = match self.state.selected() {
             Some(i) => {
@@ -65,7 +70,7 @@ impl Dir {
         self.state.select(Some(i));
     }
 
-    pub fn previous(&mut self, show_hidden: bool) {
+    pub fn up(&mut self, show_hidden: bool) {
         let visible = self.get_visible(show_hidden);
         let i = match self.state.selected() {
             Some(i) => {
@@ -80,11 +85,48 @@ impl Dir {
         self.state.select(Some(i));
     }
 
-    pub fn ensure_selection(&mut self, show_hidden: bool, query: &str) {
-        let visible = self.get_visible_with_query(show_hidden, query);
-        // crate::log::write(format!("{visible:?}"));
+    pub fn pg_down(&mut self, show_hidden: bool, amount: usize) {
+        let visible = self.get_visible(show_hidden);
         let i = match self.state.selected() {
             Some(i) => {
+                self.last_selection = i;
+                let update = i + amount;
+                if update < visible.len() - 1 {
+                    update
+                } else {
+                    visible.len() - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn pg_up(&mut self, _show_hidden: bool, amount: usize) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                self.last_selection = i;
+                let update = i as i32 - amount as i32;
+                if update >= 0 {
+                    i - amount
+                } else {
+                    0
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    pub fn ensure_selection(&mut self, show_hidden: bool, query: &str) {
+        let visible = self.get_visible_with_query(show_hidden, query);
+
+        if visible.is_empty() {
+            return self.state.select(Some(0));
+        }
+        let i = match self.state.selected() {
+            Some(i) => {
+                // self.last_selection = i;
                 if i >= visible.len() {
                     visible.len() - 1
                 } else {
@@ -93,8 +135,11 @@ impl Dir {
             }
             None => 0,
         };
-        // crate::log::write(format!("idx {i}"));
         self.state.select(Some(i));
+    }
+
+    pub fn _mark_selected(&self, _name: String, _show_hidden: bool) -> usize {
+        0
     }
 
     pub fn index_by_name(&self, name: String, show_hidden: bool) -> usize {
@@ -108,25 +153,16 @@ impl Dir {
     }
 
     fn get_visible_with_query(&self, show_hidden: bool, query: &str) -> Vec<File> {
-        let files = self.files.clone();
-
-        let hidden = files
+        self.files
+            .clone()
             .into_iter()
             .filter(|x| if !show_hidden { !x.is_hidden } else { true })
-            .collect::<Vec<File>>();
-
-        let mut visible = vec![];
-        for file in hidden.into_iter() {
-            if let Some(_matches) = match_and_score(query, &file.name) {
-                visible.push(file);
-            }
-        }
-        visible
+            .filter(|x| match_and_score(query, &x.name).is_some())
+            .collect::<Vec<File>>()
     }
     fn get_visible(&self, show_hidden: bool) -> Vec<File> {
-        let visible = self.files.clone();
-
-        visible
+        self.files
+            .clone()
             .into_iter()
             .filter(|x| if !show_hidden { !x.is_hidden } else { true })
             .collect::<Vec<File>>()
@@ -135,8 +171,22 @@ impl Dir {
     pub fn get_selected_file(&self, show_hidden: bool, query: &str) -> Option<File> {
         let visible = self.get_visible_with_query(show_hidden, query);
         match self.state.selected() {
-            Some(i) => visible.into_iter().nth(i),
+            Some(i) => visible.get(i).cloned(),
             None => None,
+        }
+    }
+
+    pub fn toggle_select_current_file(&mut self, show_hidden: bool, query: &str) {
+        let mut visible: Vec<&mut File> = self
+            .files
+            .iter_mut()
+            .filter(|x| if !show_hidden { !x.is_hidden } else { true })
+            .filter(|x| match_and_score(query, &x.name).is_some())
+            .collect::<Vec<&mut File>>();
+
+        if let Some(i) = self.state.selected() {
+            let file = visible.get_mut(i).unwrap();
+            file.toggle_selected();
         }
     }
 
@@ -156,6 +206,9 @@ impl Dir {
                 if file.is_dir {
                     style = style.fg(Color::LightBlue);
                 }
+                if file.selected {
+                    style = style.add_modifier(Modifier::BOLD);
+                }
                 files.push((score, ListItem::new(span).style(style)));
             }
         }
@@ -170,7 +223,6 @@ impl Dir {
                 .collect::<Vec<ListItem>>(),
         )
         .highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
-        // .highlight_symbol(">");
 
         f.render_stateful_widget(list, rect, &mut self.state);
     }
@@ -187,16 +239,24 @@ impl Dir {
             .iter()
             .filter(|f| !f.is_hidden || show_hidden)
             .map(|f| {
+                let mut name = f.name.to_owned();
                 let mut style = Style::default();
                 if f.is_dir {
                     style = style.fg(Color::LightBlue);
                 }
-                ListItem::new(f.name.to_owned()).style(style)
+                if f.is_symlink {
+                    if let Ok(path) = read_link(&name) {
+                        name += format!("~>{}", path.to_string_lossy()).as_str();
+                    } else {
+                        name += "~>?";
+                    }
+                    style = style.fg(Color::Red);
+                }
+                ListItem::new(name).style(style)
             })
             .collect();
         let list = List::new(files)
             .highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
-        // .highlight_symbol(">");
 
         if stateful {
             f.render_stateful_widget(list, rect, &mut self.state);

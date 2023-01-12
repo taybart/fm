@@ -1,16 +1,13 @@
 use super::dir::Dir;
 use super::state::{Command, Mode, State};
-use std::{
-    collections::HashMap,
-    env, fs, io,
-    path::{Path, PathBuf},
-    process::Command as cmd,
-};
+use super::tree::Tree;
+use crate::log;
+use std::{io, process::Command as cmd};
 
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     text::Text,
     widgets::Paragraph,
     Frame, Terminal,
@@ -25,35 +22,46 @@ use crossterm::{
 enum InputResult {
     OK,
     Edit,
+    Shell,
     Exit,
 }
 
-pub struct Tree {
-    fs_tree: HashMap<PathBuf, Dir>,
+pub struct FM {
+    tree: Tree,
     pub state: State,
 }
 
-impl Tree {
-    pub fn new() -> Tree {
-        let parent = Dir::new(Tree::parent_path().expect("parent path idk")).unwrap();
-        let cwd = Dir::new(Tree::cwd_path().expect("cwd path idk")).unwrap();
+impl FM {
+    pub fn new() -> Result<FM, String> {
+        Ok(FM {
+            tree: Tree::new()?,
+            state: State::default(),
+        })
+    }
 
-        let mut fs_tree: HashMap<PathBuf, Dir> = HashMap::new();
-        fs_tree.insert(parent.path.clone(), parent);
-        fs_tree.insert(cwd.path.clone(), cwd);
+    pub fn shell(&mut self) -> Result<(), String> {
+        let shell = std::env::var("SHELL").map_err(|e| format!("could not get editor {e}"))?;
 
-        let state = State::default();
+        let mut child = cmd::new(shell)
+            .spawn()
+            .map_err(|e| format!("failed to start editor {e}"))?;
 
-        Tree { fs_tree, state }
+        child.wait().map_err(|e| format!("child failed {e}"))?;
+        Ok(())
     }
 
     pub fn edit(&mut self) -> Result<(), String> {
+        // TODO: better error handling
         let editor = std::env::var("EDITOR").map_err(|e| format!("could not get editor {e}"))?;
 
         let query = self.state.query_string.clone();
         let show_hidden = self.state.show_hidden;
 
-        let file = self.cwd().get_selected_file(show_hidden, &query).unwrap();
+        let file = self
+            .tree
+            .cwd()
+            .get_selected_file(show_hidden, &query)
+            .unwrap();
         if !file.is_dir {
             let mut child = cmd::new(editor)
                 .arg(file.name)
@@ -65,63 +73,6 @@ impl Tree {
         Ok(())
     }
 
-    pub fn parent_path() -> Result<PathBuf, std::io::Error> {
-        fs::canonicalize(Path::new(".."))
-    }
-    pub fn cwd_path() -> Result<PathBuf, std::io::Error> {
-        fs::canonicalize(Path::new("."))
-    }
-
-    pub fn parent(&mut self) -> &mut Dir {
-        let parent_path = Tree::parent_path().expect("could not canonicalize parent path");
-        self.fs_tree.get_mut(&parent_path).unwrap()
-    }
-    pub fn cwd(&mut self) -> &mut Dir {
-        let cwd_path = fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
-        self.fs_tree.get_mut(&cwd_path).unwrap()
-    }
-
-    pub fn cd_parent(&mut self) {
-        let init_parent_path = Tree::cwd_path().expect("could not canonicalize parent path");
-
-        env::set_current_dir(Path::new("..")).unwrap();
-        let parent_path = Tree::parent_path().expect("could not canonicalize parent path");
-
-        self.fs_tree
-            .entry(parent_path.clone())
-            .or_insert_with(|| Dir::new(parent_path).unwrap());
-        let cwd_path = Tree::cwd_path().expect("could not canonicalize cwd path");
-        self.fs_tree
-            .entry(cwd_path.clone())
-            .or_insert_with(|| Dir::new(cwd_path.clone()).unwrap());
-        let cwd = self.fs_tree.get_mut(&cwd_path).unwrap();
-        let idx = cwd.index_by_name(
-            init_parent_path
-                .file_name()
-                .unwrap()
-                .to_os_string()
-                .into_string()
-                .unwrap(),
-            self.state.show_hidden,
-        );
-        cwd.state.select(Some(idx));
-    }
-    pub fn cd_selected(&mut self) {
-        let query = self.state.query_string.clone();
-        let show_hidden = self.state.show_hidden;
-        if let Some(selected) = self.cwd().get_selected_file(show_hidden, &query) {
-            if selected.is_dir {
-                env::set_current_dir(Path::new(&selected.name)).unwrap();
-                let cwd_path =
-                    fs::canonicalize(Path::new(".")).expect("could not canonicalize cwd path");
-
-                self.fs_tree
-                    .entry(cwd_path.clone())
-                    .or_insert_with(|| Dir::new(cwd_path).unwrap());
-            }
-        }
-    }
-
     pub fn render<B: Backend>(&mut self, f: &mut Frame<B>) -> Result<(), String> {
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
@@ -130,26 +81,36 @@ impl Tree {
             .constraints(
                 [
                     Constraint::Percentage(20),
-                    Constraint::Percentage(30),
-                    Constraint::Percentage(50),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(40),
                 ]
                 .as_ref(),
             )
             .split(f.size());
+
+        f.render_widget(
+            Paragraph::new(Text::raw(Tree::cwd_path()?.to_str().unwrap_or(""))).style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(Color::LightGreen),
+            ),
+            Rect::new(1, 0, f.size().width - 1, 1),
+        );
 
         let show_hidden = self.state.show_hidden;
         let query = self.state.query_string.clone();
         /*
          * Left column
          */
-        self.parent().render(f, false, chunks[0], show_hidden);
+        self.tree.parent().render(f, false, chunks[0], show_hidden);
 
         /*
          * middle column
          */
         match self.state.mode {
             Mode::Search => {
-                self.cwd()
+                self.tree
+                    .cwd()
                     .render_with_query(f, &query, chunks[1], show_hidden);
                 f.render_widget(
                     Paragraph::new(Text::raw(format!("> {}", &query.clone())))
@@ -164,9 +125,10 @@ impl Tree {
                 )
             }
             Mode::Normal => {
-                self.cwd().render(f, true, chunks[1], show_hidden);
+                self.tree.cwd().render(f, true, chunks[1], show_hidden);
             }
             Mode::Command => {
+                self.tree.cwd().render(f, true, chunks[1], show_hidden);
                 f.render_widget(
                     Paragraph::new(Text::raw(format!(
                         ":{}",
@@ -188,9 +150,8 @@ impl Tree {
          * right column
          */
 
-        if let Some(selected) = self.cwd().get_selected_file(show_hidden, &query) {
+        if let Some(selected) = self.tree.cwd().get_selected_file(show_hidden, &query) {
             if selected.is_dir {
-                // TODO: render messsage about perissions if that fails
                 Dir::new(selected.path)?.render(f, false, chunks[2], show_hidden);
             } else {
                 f.render_widget(
@@ -226,7 +187,27 @@ impl Tree {
                         )?;
                         terminal.show_cursor()?;
                         if let Err(e) = self.edit() {
-                            crate::log::error(e);
+                            log::error(e);
+                        }
+                        // setup terminal
+                        enable_raw_mode()?;
+                        let mut stdout = io::stdout();
+                        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+                        let backend = CrosstermBackend::new(stdout);
+                        terminal = Terminal::new(backend)?;
+                        self.state.reset_query();
+                    }
+                    InputResult::Shell => {
+                        // restore terminal
+                        disable_raw_mode()?;
+                        execute!(
+                            terminal.backend_mut(),
+                            LeaveAlternateScreen,
+                            DisableMouseCapture
+                        )?;
+                        terminal.show_cursor()?;
+                        if let Err(e) = self.shell() {
+                            log::error(e);
                         }
                         // setup terminal
                         enable_raw_mode()?;
@@ -255,24 +236,46 @@ impl Tree {
         let query = self.state.query_string.clone();
 
         match self.state.handle_input(key).command {
-            Command::Parent => self.cd_parent(),
+            Command::Parent => self.tree.cd_parent(&self.state),
             Command::Selected => {
-                if let Some(selected) = self.cwd().get_selected_file(show_hidden, &query) {
+                if let Some(selected) = self.tree.cwd().get_selected_file(show_hidden, &query) {
                     if selected.is_dir {
-                        self.cd_selected();
-                    } else {
+                        self.tree.cd_selected(&self.state);
+                        self.state.reset_query();
+                    } else if !self.state.query_string.is_empty() {
+                        log::write(format!("edit {}", selected.name));
                         return InputResult::Edit;
                     }
-                    self.state.reset_command();
+
+                    // if self.state.mode == Mode::Search {
+                    //     log::write(format!("edit {}", selected.name));
+                    //     return InputResult::Edit;
+                    // }
+                    // self.state.reset_query();
                 }
             }
-            Command::Up => self.cwd().next(show_hidden),
-            Command::Down => self.cwd().previous(show_hidden),
+            Command::Up => self.tree.cwd().up(show_hidden),
+            Command::Down => self.tree.cwd().down(show_hidden),
+            Command::PgUp => self.tree.cwd().pg_up(show_hidden, 10),
+            Command::PgDown => self.tree.cwd().pg_down(show_hidden, 10),
             Command::Edit => return InputResult::Edit,
+            Command::Shell => return InputResult::Shell,
+            Command::Execute => {
+                self.execute_command(self.state.command_string.clone());
+                self.state.reset_command();
+            }
+            Command::SelectFile => {
+                self.tree
+                    .cwd()
+                    .toggle_select_current_file(show_hidden, &query);
+                self.tree.cwd().down(show_hidden)
+            }
+            Command::ResetSelection => self.tree.cwd().state.select(Some(0)),
             Command::Nop => {
                 if self.state.mode == Mode::Search {
-                    let query = self.state.query_string.clone();
-                    self.cwd().ensure_selection(show_hidden, &query);
+                    self.tree
+                        .cwd()
+                        .ensure_selection(show_hidden, &self.state.query_string);
                 }
             }
         };
@@ -280,6 +283,43 @@ impl Tree {
             InputResult::Exit
         } else {
             InputResult::OK
+        }
+    }
+
+    fn execute_command(&mut self, cmd_string: String) {
+        let cmds = cmd_string.split(' ').collect::<Vec<&str>>();
+        match cmds[0] {
+            "!" => {
+                log::write(format!(
+                    "execute {} {:?}",
+                    cmds.get(1).unwrap(),
+                    cmds.get(2..).unwrap()
+                ));
+            }
+            "cd" => {
+                log::write(format!("cd {}", cmds[1]));
+                let dir = shellexpand::tilde(cmds[1]);
+                let dir = std::fs::canonicalize(dir.into_owned()).expect("idk");
+                if let Err(e) = std::env::set_current_dir(&dir) {
+                    log::error(format!("unknown command {e}"));
+                }
+                self.tree.cd(dir);
+            }
+            "exit" | "q" => {
+                log::write("quitting".to_string());
+                self.state.exit();
+            }
+            "edit" | "e" => {
+                log::write("editing".to_string());
+                self.edit().expect("could not edit");
+            }
+            "hidden" | "h" => {
+                log::write("toggle hidden".to_string());
+                self.state.toggle_hidden();
+            }
+            _ => {
+                log::error(format!("unknown command {:?}", cmds));
+            }
         }
     }
 }
