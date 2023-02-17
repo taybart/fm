@@ -74,18 +74,27 @@ impl FM {
     }
 
     pub fn render<B: Backend>(&mut self, f: &mut Frame<B>) -> Result<(), String> {
+        let hp = self.state.hide_parent;
+        // TODO: add to config
+        if f.size().width < 80 {
+            self.state.hide_parent = true;
+        }
+
+        let constraints = if self.state.hide_parent {
+            vec![Constraint::Percentage(30), Constraint::Percentage(70)]
+        } else {
+            vec![
+                Constraint::Percentage(20),
+                Constraint::Percentage(30),
+                Constraint::Percentage(50),
+            ]
+        };
+
         let chunks = Layout::default()
             .direction(Direction::Horizontal)
             .vertical_margin(1)
             .horizontal_margin(3)
-            .constraints(
-                [
-                    Constraint::Percentage(20),
-                    Constraint::Percentage(40),
-                    Constraint::Percentage(40),
-                ]
-                .as_ref(),
-            )
+            .constraints(constraints)
             .split(f.size());
 
         f.render_widget(
@@ -102,40 +111,43 @@ impl FM {
         /*
          * Left column
          */
-        self.tree.parent().render(f, false, chunks[0], show_hidden);
+        if !self.state.hide_parent {
+            self.tree.parent().render(f, false, chunks[0], show_hidden);
+        }
 
         /*
          * middle column
          */
+        let idx = if self.state.hide_parent { 0 } else { 1 };
         match self.state.mode {
             Mode::Search => {
                 self.tree
                     .cwd()
-                    .render_with_query(f, &query, chunks[1], show_hidden);
+                    .render_with_query(f, &query, chunks[idx], show_hidden);
                 f.render_widget(
                     Paragraph::new(Text::raw(format!("> {}", &query.clone())))
                         .style(Style::default().add_modifier(Modifier::UNDERLINED)),
-                    Rect::new(chunks[1].x + 1, f.size().height - 1, chunks[1].width, 1),
+                    Rect::new(chunks[idx].x + 1, f.size().height - 1, chunks[idx].width, 1),
                 );
                 f.set_cursor(
                     // TODO: add constants for offsets?
                     // Put cursor past the end of the input text
-                    chunks[1].x + query.len() as u16 + 3,
+                    chunks[idx].x + query.len() as u16 + 3,
                     f.size().height,
                 )
             }
             Mode::Normal => {
-                self.tree.cwd().render(f, true, chunks[1], show_hidden);
+                self.tree.cwd().render(f, true, chunks[idx], show_hidden);
             }
             Mode::Command => {
-                self.tree.cwd().render(f, true, chunks[1], show_hidden);
+                self.tree.cwd().render(f, true, chunks[idx], show_hidden);
                 f.render_widget(
                     Paragraph::new(Text::raw(format!(
                         ":{}",
                         &self.state.command_string.clone()
                     )))
                     .style(Style::default().add_modifier(Modifier::UNDERLINED)),
-                    Rect::new(chunks[0].x + 1, f.size().height - 1, chunks[1].width, 1),
+                    Rect::new(chunks[0].x + 1, f.size().height - 1, chunks[idx].width, 1),
                 );
                 f.set_cursor(
                     // TODO: add constants for offsets?
@@ -150,16 +162,16 @@ impl FM {
          * right column
          */
 
+        let idx = if self.state.hide_parent { 1 } else { 2 };
         if let Some(selected) = self.tree.cwd().get_selected_file(show_hidden, &query) {
             if selected.is_dir {
-                Dir::new(selected.path)?.render(f, false, chunks[2], show_hidden);
+                Dir::new(selected.path)?.render(f, false, chunks[idx], show_hidden);
             } else {
-                f.render_widget(
-                    Paragraph::new(Text::raw(selected.get_contents())),
-                    chunks[2],
-                );
+                f.render_widget(Paragraph::new(Text::raw(selected.contents())), chunks[idx]);
             }
         };
+
+        self.state.hide_parent = hp;
         Ok(())
     }
 
@@ -295,6 +307,9 @@ impl FM {
                     cmds.get(1).unwrap(),
                     cmds.get(2..).unwrap()
                 ));
+            }
+            "rename" | "rn" => {
+                log::write(format!("rename {}", cmds[1]));
             }
             "cd" => {
                 log::write(format!("cd {}", cmds[1]));

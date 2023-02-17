@@ -77,7 +77,7 @@ impl File {
         }
     }
 
-    pub fn get_contents(&self) -> String {
+    pub fn contents(&self) -> String {
         read_to_string(&self.name).unwrap_or_else(|_| "".to_string())
     }
 }

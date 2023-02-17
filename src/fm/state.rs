@@ -27,6 +27,7 @@ pub enum Command {
 #[derive(Default)]
 pub struct State {
     pub show_hidden: bool,
+    pub hide_parent: bool,
     pub command: Command,
     pub query_string: String,
     pub command_string: String,
@@ -60,7 +61,10 @@ impl State {
         self.show_hidden = !self.show_hidden;
         self
     }
-
+    pub fn toggle_show_parent(&mut self) -> &mut State {
+        self.hide_parent = !self.hide_parent;
+        self
+    }
     pub fn reset_command(&mut self) -> &mut State {
         self.command_string = String::new();
         self
@@ -69,81 +73,95 @@ impl State {
         self.query_string = String::new();
         self
     }
+
     pub fn handle_input(&mut self, key: KeyEvent) -> &mut State {
         self.command = Command::Nop;
         match self.mode {
-            Mode::Normal => match key.code {
-                // modes
-                KeyCode::Esc | KeyCode::Char('q') => self.exit(),
-                KeyCode::Enter => self.with_command(Command::Edit),
-                KeyCode::Tab => self.with_command(Command::SelectFile),
-                KeyCode::Char(':') => self.with_mode(Mode::Command),
-                KeyCode::Char('/') => self
-                    .with_mode(Mode::Search)
-                    .with_command(Command::ResetSelection),
-                KeyCode::Char('H') => self.toggle_hidden(),
-                KeyCode::Char('S') => self.with_command(Command::Shell),
-                // motion
-                KeyCode::Left | KeyCode::Char('h') => self.with_command(Command::Parent),
-                KeyCode::Down | KeyCode::Char('j') => self.with_command(Command::Down),
-                KeyCode::Up | KeyCode::Char('k') => self.with_command(Command::Up),
-                // FIXME: handle symlinks
-                KeyCode::Right | KeyCode::Char('l') => self.with_command(Command::Selected),
-                KeyCode::Char(c) => {
-                    if key.modifiers == KeyModifiers::CONTROL {
-                        match c {
-                            'u' => self.with_command(Command::PgUp),
-                            'd' => self.with_command(Command::PgDown),
-                            _ => self,
-                        }
-                    } else {
-                        self
+            Mode::Normal => self.handle_normal(key),
+            Mode::Search => self.handle_search(key),
+            Mode::Command => self.handle_command(key),
+        }
+    }
+
+    fn handle_normal(&mut self, key: KeyEvent) -> &mut State {
+        match key.code {
+            // modes
+            KeyCode::Esc | KeyCode::Char('q') => self.exit(),
+            KeyCode::Enter => self.with_command(Command::Edit),
+            KeyCode::Tab => self.with_command(Command::SelectFile),
+            KeyCode::Char(':') => self.with_mode(Mode::Command),
+            KeyCode::Char('/') => self
+                .with_mode(Mode::Search)
+                .with_command(Command::ResetSelection),
+            KeyCode::Char('H') => self.toggle_hidden(),
+            KeyCode::Char('P') => self.toggle_show_parent(),
+            KeyCode::Char('S') => self.with_command(Command::Shell),
+            // motion
+            KeyCode::Left | KeyCode::Char('h') => self.with_command(Command::Parent),
+            KeyCode::Down | KeyCode::Char('j') => self.with_command(Command::Down),
+            KeyCode::Up | KeyCode::Char('k') => self.with_command(Command::Up),
+            // FIXME: handle symlinks
+            KeyCode::Right | KeyCode::Char('l') => self.with_command(Command::Selected),
+            KeyCode::Char(c) => {
+                if key.modifiers == KeyModifiers::CONTROL {
+                    match c {
+                        'u' => self.with_command(Command::PgUp),
+                        'd' => self.with_command(Command::PgDown),
+                        _ => self,
                     }
-                }
-                _ => self,
-            },
-            Mode::Search => match key.code {
-                KeyCode::Esc => self.reset_query().with_mode(Mode::Normal),
-                KeyCode::Enter => self.with_mode(Mode::Normal).with_command(Command::Selected),
-                KeyCode::Backspace => {
-                    self.query_string.pop();
+                } else {
                     self
                 }
-                KeyCode::Char(c) => {
-                    if key.modifiers == KeyModifiers::CONTROL {
-                        match c {
-                            'c' => self.reset_query().with_mode(Mode::Normal),
-                            'n' => self.with_command(Command::Up),
-                            'p' => self.with_command(Command::Down),
-                            _ => self,
-                        }
-                    } else {
-                        self.query_string.push(c);
-                        self
+            }
+            _ => self,
+        }
+    }
+
+    fn handle_search(&mut self, key: KeyEvent) -> &mut State {
+        match key.code {
+            KeyCode::Esc => self.reset_query().with_mode(Mode::Normal),
+            KeyCode::Enter => self.with_mode(Mode::Normal).with_command(Command::Selected),
+            KeyCode::Backspace => {
+                self.query_string.pop();
+                self
+            }
+            KeyCode::Char(c) => {
+                if key.modifiers == KeyModifiers::CONTROL {
+                    match c {
+                        'c' => self.reset_query().with_mode(Mode::Normal),
+                        'n' => self.with_command(Command::Up),
+                        'p' => self.with_command(Command::Down),
+                        _ => self,
                     }
-                }
-                _ => self,
-            },
-            Mode::Command => match key.code {
-                KeyCode::Esc => self.with_mode(Mode::Normal),
-                KeyCode::Enter => self.with_mode(Mode::Normal).with_command(Command::Execute),
-                KeyCode::Backspace => {
-                    self.command_string.pop();
+                } else {
+                    self.query_string.push(c);
                     self
                 }
-                KeyCode::Char(c) => {
-                    if key.modifiers == KeyModifiers::CONTROL {
-                        match c {
-                            'c' => self.reset_command().with_mode(Mode::Normal),
-                            _ => self,
-                        }
-                    } else {
-                        self.command_string.push(c);
-                        self
+            }
+            _ => self,
+        }
+    }
+
+    fn handle_command(&mut self, key: KeyEvent) -> &mut State {
+        match key.code {
+            KeyCode::Esc => self.with_mode(Mode::Normal),
+            KeyCode::Enter => self.with_mode(Mode::Normal).with_command(Command::Execute),
+            KeyCode::Backspace => {
+                self.command_string.pop();
+                self
+            }
+            KeyCode::Char(c) => {
+                if key.modifiers == KeyModifiers::CONTROL {
+                    match c {
+                        'c' => self.reset_command().with_mode(Mode::Normal),
+                        _ => self,
                     }
+                } else {
+                    self.command_string.push(c);
+                    self
                 }
-                _ => self,
-            },
+            }
+            _ => self,
         }
     }
 }
