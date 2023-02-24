@@ -124,7 +124,7 @@ impl FM {
                     show_hidden,
                 );
                 f.render_widget(
-                    Paragraph::new(Text::raw(format!(">{}", &self.state.query_string)))
+                    Paragraph::new(Text::raw(format!("/{}", &self.state.query_string)))
                         .style(Style::default().add_modifier(Modifier::UNDERLINED)),
                     Rect::new(chunks[idx].x, f.size().height - 1, chunks[idx].width, 1),
                 );
