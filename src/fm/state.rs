@@ -1,5 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+use super::command::Command;
+
 #[derive(Default, Eq, PartialEq)]
 pub enum Mode {
     #[default]
@@ -8,7 +10,7 @@ pub enum Mode {
     Command,
 }
 #[derive(Default, Clone, Copy)]
-pub enum Command {
+pub enum Action {
     #[default]
     Nop,
     ResetSelection,
@@ -28,21 +30,11 @@ pub enum Command {
 pub struct State {
     pub show_hidden: bool,
     pub hide_parent: bool,
-    pub command: Command,
+    pub action: Action,
     pub query_string: String,
-    pub command_string: String,
     pub mode: Mode,
     pub exit: bool,
 }
-
-/* States:
- *      cd parent
- *      cd selected
- *      move up
- *      move down
- */
-
-impl Command {}
 
 impl State {
     pub fn exit(&mut self) -> &mut State {
@@ -53,8 +45,8 @@ impl State {
         self.mode = mode;
         self
     }
-    fn with_command(&mut self, cmd: Command) -> &mut State {
-        self.command = cmd;
+    fn with_action(&mut self, cmd: Action) -> &mut State {
+        self.action = cmd;
         self
     }
     pub fn toggle_hidden(&mut self) -> &mut State {
@@ -65,21 +57,17 @@ impl State {
         self.hide_parent = !self.hide_parent;
         self
     }
-    pub fn reset_command(&mut self) -> &mut State {
-        self.command_string = String::new();
-        self
-    }
     pub fn reset_query(&mut self) -> &mut State {
         self.query_string = String::new();
         self
     }
 
-    pub fn handle_input(&mut self, key: KeyEvent) -> &mut State {
-        self.command = Command::Nop;
+    pub fn handle_input(&mut self, key: KeyEvent, cmd: &mut Command) -> &mut State {
+        self.action = Action::Nop;
         match self.mode {
             Mode::Normal => self.handle_normal(key),
             Mode::Search => self.handle_search(key),
-            Mode::Command => self.handle_command(key),
+            Mode::Command => self.handle_command(key, cmd),
         }
     }
 
@@ -87,26 +75,26 @@ impl State {
         match key.code {
             // modes
             KeyCode::Esc | KeyCode::Char('q') => self.exit(),
-            KeyCode::Enter => self.with_command(Command::Edit),
-            KeyCode::Tab => self.with_command(Command::SelectFile),
+            KeyCode::Enter => self.with_action(Action::Edit),
+            KeyCode::Tab => self.with_action(Action::SelectFile),
             KeyCode::Char(':') => self.with_mode(Mode::Command),
             KeyCode::Char('/') => self
                 .with_mode(Mode::Search)
-                .with_command(Command::ResetSelection),
+                .with_action(Action::ResetSelection),
             KeyCode::Char('H') => self.toggle_hidden(),
             KeyCode::Char('P') => self.toggle_show_parent(),
-            KeyCode::Char('S') => self.with_command(Command::Shell),
+            KeyCode::Char('S') => self.with_action(Action::Shell),
             // motion
-            KeyCode::Left | KeyCode::Char('h') => self.with_command(Command::Parent),
-            KeyCode::Down | KeyCode::Char('j') => self.with_command(Command::Down),
-            KeyCode::Up | KeyCode::Char('k') => self.with_command(Command::Up),
+            KeyCode::Left | KeyCode::Char('h') => self.with_action(Action::Parent),
+            KeyCode::Down | KeyCode::Char('j') => self.with_action(Action::Down),
+            KeyCode::Up | KeyCode::Char('k') => self.with_action(Action::Up),
             // FIXME: handle symlinks
-            KeyCode::Right | KeyCode::Char('l') => self.with_command(Command::Selected),
+            KeyCode::Right | KeyCode::Char('l') => self.with_action(Action::Selected),
             KeyCode::Char(c) => {
                 if key.modifiers == KeyModifiers::CONTROL {
                     match c {
-                        'u' => self.with_command(Command::PgUp),
-                        'd' => self.with_command(Command::PgDown),
+                        'u' => self.with_action(Action::PgUp),
+                        'd' => self.with_action(Action::PgDown),
                         _ => self,
                     }
                 } else {
@@ -120,7 +108,7 @@ impl State {
     fn handle_search(&mut self, key: KeyEvent) -> &mut State {
         match key.code {
             KeyCode::Esc => self.reset_query().with_mode(Mode::Normal),
-            KeyCode::Enter => self.with_mode(Mode::Normal).with_command(Command::Selected),
+            KeyCode::Enter => self.with_mode(Mode::Normal).with_action(Action::Selected),
             KeyCode::Backspace => {
                 self.query_string.pop();
                 self
@@ -129,8 +117,8 @@ impl State {
                 if key.modifiers == KeyModifiers::CONTROL {
                     match c {
                         'c' => self.reset_query().with_mode(Mode::Normal),
-                        'n' => self.with_command(Command::Up),
-                        'p' => self.with_command(Command::Down),
+                        'n' => self.with_action(Action::Up),
+                        'p' => self.with_action(Action::Down),
                         _ => self,
                     }
                 } else {
@@ -142,22 +130,25 @@ impl State {
         }
     }
 
-    fn handle_command(&mut self, key: KeyEvent) -> &mut State {
+    fn handle_command(&mut self, key: KeyEvent, cmd: &mut Command) -> &mut State {
         match key.code {
             KeyCode::Esc => self.with_mode(Mode::Normal),
-            KeyCode::Enter => self.with_mode(Mode::Normal).with_command(Command::Execute),
+            KeyCode::Enter => self.with_mode(Mode::Normal).with_action(Action::Execute),
             KeyCode::Backspace => {
-                self.command_string.pop();
+                cmd.string.pop();
                 self
             }
             KeyCode::Char(c) => {
                 if key.modifiers == KeyModifiers::CONTROL {
                     match c {
-                        'c' => self.reset_command().with_mode(Mode::Normal),
+                        'c' => {
+                            cmd.reset();
+                            self.with_mode(Mode::Normal)
+                        }
                         _ => self,
                     }
                 } else {
-                    self.command_string.push(c);
+                    cmd.string.push(c);
                     self
                 }
             }

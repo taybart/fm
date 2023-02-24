@@ -1,3 +1,6 @@
+mod render;
+
+pub mod command;
 pub mod fm;
 pub mod state;
 
