@@ -54,13 +54,10 @@ impl FM {
         // TODO: better error handling
         let editor = std::env::var("EDITOR").map_err(|e| format!("could not get editor {e}"))?;
 
-        let query = self.state.query_string.clone();
-        let show_hidden = self.state.show_hidden;
-
         let file = self
             .tree
             .cwd()
-            .get_selected_file(show_hidden, &query)
+            .get_selected_file(self.state.show_hidden, &self.state.query_string)
             .unwrap();
         if !file.is_dir {
             let mut child = cmd::new(editor)
@@ -74,7 +71,7 @@ impl FM {
     }
 
     pub fn render<B: Backend>(&mut self, f: &mut Frame<B>) -> Result<(), String> {
-        let hp = self.state.hide_parent;
+        let hide_parent = self.state.hide_parent;
         // TODO: add to config
         if f.size().width < 80 {
             self.state.hide_parent = true;
@@ -107,7 +104,6 @@ impl FM {
         );
 
         let show_hidden = self.state.show_hidden;
-        let query = self.state.query_string.clone();
         /*
          * Left column
          */
@@ -121,18 +117,19 @@ impl FM {
         let idx = if self.state.hide_parent { 0 } else { 1 };
         match self.state.mode {
             Mode::Search => {
-                self.tree
-                    .cwd()
-                    .render_with_query(f, &query, chunks[idx], show_hidden);
+                self.tree.cwd().render_with_query(
+                    f,
+                    &self.state.query_string,
+                    chunks[idx],
+                    show_hidden,
+                );
                 f.render_widget(
-                    Paragraph::new(Text::raw(format!("> {}", &query.clone())))
+                    Paragraph::new(Text::raw(format!(">{}", &self.state.query_string)))
                         .style(Style::default().add_modifier(Modifier::UNDERLINED)),
-                    Rect::new(chunks[idx].x + 1, f.size().height - 1, chunks[idx].width, 1),
+                    Rect::new(chunks[idx].x, f.size().height - 1, chunks[idx].width, 1),
                 );
                 f.set_cursor(
-                    // TODO: add constants for offsets?
-                    // Put cursor past the end of the input text
-                    chunks[idx].x + query.len() as u16 + 3,
+                    chunks[idx].x + self.state.query_string.len() as u16 + 1,
                     f.size().height,
                 )
             }
@@ -142,17 +139,12 @@ impl FM {
             Mode::Command => {
                 self.tree.cwd().render(f, true, chunks[idx], show_hidden);
                 f.render_widget(
-                    Paragraph::new(Text::raw(format!(
-                        ":{}",
-                        &self.state.command_string.clone()
-                    )))
-                    .style(Style::default().add_modifier(Modifier::UNDERLINED)),
-                    Rect::new(chunks[0].x + 1, f.size().height - 1, chunks[idx].width, 1),
+                    Paragraph::new(Text::raw(format!(":{}", &self.state.command_string)))
+                        .style(Style::default().add_modifier(Modifier::UNDERLINED)),
+                    Rect::new(chunks[0].x, f.size().height - 1, chunks[idx].width, 1),
                 );
                 f.set_cursor(
-                    // TODO: add constants for offsets?
-                    // Put cursor past the end of the input text
-                    chunks[0].x + self.state.command_string.len() as u16 + 2,
+                    chunks[0].x + self.state.command_string.len() as u16 + 1,
                     f.size().height,
                 )
             }
@@ -163,7 +155,11 @@ impl FM {
          */
 
         let idx = if self.state.hide_parent { 1 } else { 2 };
-        if let Some(selected) = self.tree.cwd().get_selected_file(show_hidden, &query) {
+        if let Some(selected) = self
+            .tree
+            .cwd()
+            .get_selected_file(show_hidden, &self.state.query_string)
+        {
             if selected.is_dir {
                 Dir::new(selected.path)?.render(f, false, chunks[idx], show_hidden);
             } else {
@@ -171,7 +167,7 @@ impl FM {
             }
         };
 
-        self.state.hide_parent = hp;
+        self.state.hide_parent = hide_parent;
         Ok(())
     }
 
@@ -245,12 +241,15 @@ impl FM {
 
     fn handle_input(&mut self, key: KeyEvent) -> InputResult {
         let show_hidden = self.state.show_hidden;
-        let query = self.state.query_string.clone();
 
         match self.state.handle_input(key).command {
             Command::Parent => self.tree.cd_parent(&self.state),
             Command::Selected => {
-                if let Some(selected) = self.tree.cwd().get_selected_file(show_hidden, &query) {
+                if let Some(selected) = self
+                    .tree
+                    .cwd()
+                    .get_selected_file(show_hidden, &self.state.query_string)
+                {
                     if selected.is_dir {
                         self.tree.cd_selected(&self.state);
                         self.state.reset_query();
@@ -258,12 +257,6 @@ impl FM {
                         log::write(format!("edit {}", selected.name));
                         return InputResult::Edit;
                     }
-
-                    // if self.state.mode == Mode::Search {
-                    //     log::write(format!("edit {}", selected.name));
-                    //     return InputResult::Edit;
-                    // }
-                    // self.state.reset_query();
                 }
             }
             Command::Up => self.tree.cwd().up(show_hidden),
@@ -272,14 +265,11 @@ impl FM {
             Command::PgDown => self.tree.cwd().pg_down(show_hidden, 10),
             Command::Edit => return InputResult::Edit,
             Command::Shell => return InputResult::Shell,
-            Command::Execute => {
-                self.execute_command(self.state.command_string.clone());
-                self.state.reset_command();
-            }
+            Command::Execute => self.execute_command(),
             Command::SelectFile => {
                 self.tree
                     .cwd()
-                    .toggle_select_current_file(show_hidden, &query);
+                    .toggle_select_current_file(show_hidden, &self.state.query_string);
                 self.tree.cwd().down(show_hidden)
             }
             Command::ResetSelection => self.tree.cwd().state.select(Some(0)),
@@ -298,18 +288,22 @@ impl FM {
         }
     }
 
-    fn execute_command(&mut self, cmd_string: String) {
-        let cmds = cmd_string.split(' ').collect::<Vec<&str>>();
+    fn execute_command(&mut self) {
+        // | :delete       | ed      | Moves file to temporary location. After fm is closed, the files will be deleted permanently            |
+        // | :undo         | eu      | Put files back where they were and don't delete them at the end of the fm session.                     |
+        // | :yank         | yy      | Copy file under cursor                                                                                 |
+        // | :cut          | dd      | Cut file under cursor                                                                                  |
+        // | :paste        | pp      | Paste file to current directory                                                                        |
+
+        let cmds = self.state.command_string.split(' ').collect::<Vec<&str>>();
         match cmds[0] {
-            "!" => {
-                log::write(format!(
-                    "execute {} {:?}",
-                    cmds.get(1).unwrap(),
-                    cmds.get(2..).unwrap()
-                ));
-            }
             "rename" | "rn" => {
-                log::write(format!("rename {}", cmds[1]));
+                // TODO: if no cmd[1] ask for name
+                if let Some(new_name) = cmds.get(1) {
+                    self.tree
+                        .cwd()
+                        .rename_selected(new_name, self.state.show_hidden);
+                }
             }
             "cd" => {
                 log::write(format!("cd {}", cmds[1]));
@@ -332,9 +326,31 @@ impl FM {
                 log::write("toggle hidden".to_string());
                 self.state.toggle_hidden();
             }
-            _ => {
-                log::error(format!("unknown command {:?}", cmds));
-            }
+            _ => match cmds[0].chars().nth(0).unwrap() {
+                '!' => {
+                    let mut exec = cmds.get(0).unwrap().to_string();
+                    exec.remove(0);
+                    let args = cmds.get(1..).unwrap();
+                    log::write(format!("execute {} {:?}", exec, args));
+
+                    match cmd::new(exec).args(args).spawn() {
+                        Ok(mut child) => {
+                            if let Err(e) = child.wait() {
+                                log::error(e.to_string())
+                            }
+                        }
+                        Err(e) => log::error(e.to_string()),
+                    }
+
+                    if let Err(e) = self.tree.cwd().refresh() {
+                        log::error(e);
+                    }
+                }
+                _ => {
+                    log::error(format!("unknown command {:?}", cmds));
+                }
+            },
         }
+        self.state.reset_command();
     }
 }

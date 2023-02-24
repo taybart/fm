@@ -10,7 +10,7 @@ use tui::{
     backend::Backend,
     layout::Rect,
     style::{Color, Modifier, Style},
-    widgets::{List, ListItem, ListState},
+    widgets::{Block, Borders, List, ListItem, ListState},
     Frame,
 };
 
@@ -26,7 +26,7 @@ pub struct Dir {
 impl Dir {
     pub fn new(dir_name: PathBuf) -> Result<Dir, String> {
         let mut files = Vec::new();
-        match read_dir(dir_name.clone()) {
+        match read_dir(&dir_name) {
             Ok(dir) => {
                 for entry in dir {
                     match File::new(entry.unwrap()) {
@@ -39,7 +39,7 @@ impl Dir {
 
                 files.sort_by(|a, b| a.name.cmp(&b.name));
 
-                let path = canonicalize(dir_name).expect("could not canonicalize directory");
+                let path = canonicalize(&dir_name).expect("could not canonicalize directory");
 
                 let mut state = ListState::default();
                 state.select(Some(0));
@@ -53,6 +53,46 @@ impl Dir {
             }
             Err(e) => Err(format!("could not read dir {dir_name:?}: {e}")),
         }
+    }
+
+    pub fn refresh(&mut self) -> Result<(), String> {
+        let mut files = Vec::new();
+        match read_dir(&self.path) {
+            Ok(dir) => {
+                for entry in dir {
+                    match File::new(entry.unwrap()) {
+                        Ok(file) => {
+                            files.push(file);
+                        }
+                        Err(e) => log::error(e),
+                    }
+                }
+
+                files.sort_by(|a, b| a.name.cmp(&b.name));
+
+                self.files = files;
+                Ok(())
+            }
+            Err(e) => Err(format!("could not refresh dir: {e}")),
+        }
+    }
+
+    pub fn rename_selected(&mut self, new_name: &str, show_hidden: bool) {
+        log::write(format!(
+            "rename {:?} {}",
+            self.get_selected_file(show_hidden, "").unwrap().path,
+            new_name
+        ));
+        let orig_name = self.get_selected_file(show_hidden, "").unwrap().name;
+        if let Err(e) = std::fs::rename(orig_name, &new_name) {
+            log::error(e.to_string());
+        }
+        if let Err(e) = self.refresh() {
+            log::error(e.to_string());
+        }
+
+        let idx = self.index_by_name(new_name.to_string(), show_hidden);
+        self.state.select(Some(idx));
     }
 
     pub fn down(&mut self, show_hidden: bool) {
@@ -222,8 +262,8 @@ impl Dir {
                 .map(|l| l.1.to_owned())
                 .collect::<Vec<ListItem>>(),
         )
+        .block(Block::default().borders(Borders::RIGHT))
         .highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
-
         f.render_stateful_widget(list, rect, &mut self.state);
     }
 
@@ -245,17 +285,19 @@ impl Dir {
                     style = style.fg(Color::LightBlue);
                 }
                 if f.is_symlink {
-                    if let Ok(path) = read_link(&name) {
-                        name += format!("~>{}", path.to_string_lossy()).as_str();
+                    if let Ok(path) = read_link(&f.path) {
+                        name += format!("->{}", path.to_string_lossy()).as_str();
+                        style = style.fg(Color::Magenta);
                     } else {
                         name += "~>?";
+                        style = style.fg(Color::Red);
                     }
-                    style = style.fg(Color::Red);
                 }
                 ListItem::new(name).style(style)
             })
             .collect();
         let list = List::new(files)
+            .block(Block::default().borders(Borders::RIGHT))
             .highlight_style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED));
 
         if stateful {
