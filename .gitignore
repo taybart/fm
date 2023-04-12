@@ -3,4 +3,5 @@ vendor
 **/.env
 build/*
 dist/*
+/target
 
