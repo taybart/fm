@@ -3,7 +3,7 @@ use crate::log;
 
 use super::file::File;
 
-use std::fs::{canonicalize, read_dir, read_link};
+use std::fs::{self, canonicalize, read_dir, read_link};
 use std::path::PathBuf;
 
 use tui::{
@@ -83,8 +83,13 @@ impl Dir {
             self.get_selected_file(show_hidden, "").unwrap().path,
             new_name
         ));
-        let orig_name = self.get_selected_file(show_hidden, "").unwrap().name;
-        if let Err(e) = std::fs::rename(orig_name, &new_name) {
+        let file = self.get_selected_file(show_hidden, "").unwrap();
+
+        if fs::metadata(new_name).is_ok() {
+            log::error(format!("file {new_name} exists"));
+            return;
+        }
+        if let Err(e) = std::fs::rename(file.name, &new_name) {
             log::error(e.to_string());
         }
         if let Err(e) = self.refresh() {
