@@ -79,9 +79,8 @@ impl Dir {
 
     pub fn rename_selected(&mut self, new_name: &str, show_hidden: bool) {
         log::write(format!(
-            "rename {:?} {}",
+            "rename {:?} {new_name}",
             self.get_selected_file(show_hidden, "").unwrap().path,
-            new_name
         ));
         let file = self.get_selected_file(show_hidden, "").unwrap();
 

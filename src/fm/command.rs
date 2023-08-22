@@ -83,7 +83,7 @@ impl Command {
                     let mut exec = cmds.get(0).unwrap().to_string();
                     exec.remove(0);
                     let args = cmds.get(1..).unwrap();
-                    log::write(format!("execute {} {:?}", exec, args));
+                    log::write(format!("execute {exec} {args:?}"));
 
                     match cmd::new(exec).args(args).spawn() {
                         Ok(mut child) => {
@@ -99,7 +99,7 @@ impl Command {
                     }
                 }
                 _ => {
-                    log::error(format!("unknown command {:?}", cmds));
+                    log::error(format!("unknown command {cmds:?}"));
                 }
             },
         }

@@ -1,11 +1,11 @@
 mod render;
 
-pub mod command;
-pub mod fm;
-pub mod state;
+mod command;
+mod fm;
+mod state;
 
-pub mod dir;
-pub mod file;
-pub mod tree;
+mod dir;
+mod file;
+mod tree;
 
 pub use fm::FM;

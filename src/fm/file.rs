@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use tui::{
     style::{Color, Style},
-    text::{Span, Spans},
+    text::{Line, Span},
 };
 
 #[derive(Clone, Debug)]
@@ -47,7 +47,7 @@ impl File {
     }
 
     /// formats the file name with matched letters highlighted
-    pub fn display_with_query(&self, query: &str) -> Option<(f64, Spans)> {
+    pub fn display_with_query(&self, query: &str) -> Option<(f64, Line)> {
         match match_and_score_with_positions(query, &self.name) {
             Some(mut matches) => {
                 let mut texts = Vec::new();
@@ -70,7 +70,7 @@ impl File {
                 texts.push(Span::raw(string));
 
                 // return score and formatted name
-                Some((matches.0, Spans::from(texts)))
+                Some((matches.0, Line::from(texts)))
             }
             None => None,
         }
