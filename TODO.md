@@ -1,4 +1,5 @@
 ## via keybind
+
 - [x] rename
 - [ ] mv
 - [ ] rm
@@ -6,3 +7,4 @@
 - [ ] mkdir
 - [ ] touch
 - [ ] case sensitive rename
+- [ ] tab completion
