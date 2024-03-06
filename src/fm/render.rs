@@ -13,6 +13,8 @@ use tui::{
     Frame, Terminal,
 };
 
+use anyhow::Result;
+
 use super::{dir::Dir, fm::FM, state::Mode, tree::Tree};
 
 pub fn setup_tui() -> io::Result<Terminal<CrosstermBackend<Stdout>>> {
@@ -34,7 +36,7 @@ pub fn teardown_tui(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> io::Re
     Ok(())
 }
 
-pub fn render<B: Backend>(fm: &mut FM, f: &mut Frame<B>) -> Result<(), String> {
+pub fn render<B: Backend>(fm: &mut FM, f: &mut Frame<B>) -> Result<()> {
     let hide_parent = fm.state.hide_parent;
     // TODO: add to config
     if f.size().width < 80 {

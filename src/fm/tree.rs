@@ -1,3 +1,5 @@
+use anyhow::{Context, Result};
+
 use super::dir::Dir;
 use super::state::State;
 use std::{
@@ -11,7 +13,7 @@ pub struct Tree {
 }
 
 impl Tree {
-    pub fn new() -> Result<Tree, String> {
+    pub fn new() -> Result<Tree> {
         let parent = Dir::new(Tree::parent_path()?)?;
         let cwd = Dir::new(Tree::cwd_path()?)?;
 
@@ -22,11 +24,11 @@ impl Tree {
         Ok(Tree { fs })
     }
 
-    pub fn parent_path() -> Result<PathBuf, String> {
-        fs::canonicalize(Path::new("..")).map_err(|e| format!("could not get parent path {e}"))
+    pub fn parent_path() -> Result<PathBuf> {
+        fs::canonicalize(Path::new("..")).context("could not get parent path")
     }
-    pub fn cwd_path() -> Result<PathBuf, String> {
-        fs::canonicalize(Path::new(".")).map_err(|e| format!("could not get cwd path {e}"))
+    pub fn cwd_path() -> Result<PathBuf> {
+        fs::canonicalize(Path::new(".")).context("could not get cwd path")
     }
 
     pub fn parent(&mut self) -> &mut Dir {

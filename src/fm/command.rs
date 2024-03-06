@@ -95,7 +95,7 @@ impl Command {
                     }
 
                     if let Err(e) = tree.cwd().refresh() {
-                        log::error(e);
+                        log::error(e.to_string())
                     }
                 }
                 _ => {

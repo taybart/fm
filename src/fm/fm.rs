@@ -1,3 +1,4 @@
+use anyhow::Result;
 use crossterm::event::{self, Event, KeyEvent};
 use std::io;
 
@@ -22,7 +23,7 @@ pub struct FM {
 }
 
 impl FM {
-    pub fn new() -> Result<FM, String> {
+    pub fn new() -> Result<FM> {
         Ok(FM {
             tree: Tree::new()?,
             state: State::default(),

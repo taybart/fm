@@ -1,6 +1,8 @@
 use crate::finder::match_and_score;
 use crate::log;
 
+use anyhow::{Context, Result};
+
 use super::file::File;
 
 use std::fs::{self, canonicalize, read_dir, read_link};
@@ -24,57 +26,49 @@ pub struct Dir {
 }
 
 impl Dir {
-    pub fn new(dir_name: PathBuf) -> Result<Dir, String> {
+    pub fn new(dir_name: PathBuf) -> Result<Dir> {
         let mut files = Vec::new();
-        match read_dir(&dir_name) {
-            Ok(dir) => {
-                for entry in dir {
-                    match File::new(entry.unwrap()) {
-                        Ok(file) => {
-                            files.push(file);
-                        }
-                        Err(e) => log::error(e),
-                    }
+        let dir = read_dir(&dir_name).context(format!("could not read dir {dir_name:?}"))?;
+        for entry in dir {
+            match File::new(entry.unwrap()) {
+                Ok(file) => {
+                    files.push(file);
                 }
-
-                files.sort_by(|a, b| a.name.cmp(&b.name));
-
-                let path = canonicalize(&dir_name).expect("could not canonicalize directory");
-
-                let mut state = ListState::default();
-                state.select(Some(0));
-                Ok(Dir {
-                    state,
-                    visible_files: files.clone(),
-                    last_selection: 0,
-                    files,
-                    path,
-                })
+                Err(e) => log::error(e),
             }
-            Err(e) => Err(format!("could not read dir {dir_name:?}: {e}")),
         }
+
+        files.sort_by(|a, b| a.name.cmp(&b.name));
+
+        let path = canonicalize(&dir_name).expect("could not canonicalize directory");
+
+        let mut state = ListState::default();
+        state.select(Some(0));
+        Ok(Dir {
+            state,
+            visible_files: files.clone(),
+            last_selection: 0,
+            files,
+            path,
+        })
     }
 
-    pub fn refresh(&mut self) -> Result<(), String> {
+    pub fn refresh(&mut self) -> Result<()> {
         let mut files = Vec::new();
-        match read_dir(&self.path) {
-            Ok(dir) => {
-                for entry in dir {
-                    match File::new(entry.unwrap()) {
-                        Ok(file) => {
-                            files.push(file);
-                        }
-                        Err(e) => log::error(e),
-                    }
+        let dir = read_dir(&self.path).context("could not refresh dir")?;
+        for entry in dir {
+            match File::new(entry.unwrap()) {
+                Ok(file) => {
+                    files.push(file);
                 }
-
-                files.sort_by(|a, b| a.name.cmp(&b.name));
-
-                self.files = files;
-                Ok(())
+                Err(e) => log::error(e),
             }
-            Err(e) => Err(format!("could not refresh dir: {e}")),
         }
+
+        files.sort_by(|a, b| a.name.cmp(&b.name));
+
+        self.files = files;
+        Ok(())
     }
 
     pub fn rename_selected(&mut self, new_name: &str, show_hidden: bool) {
